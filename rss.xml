@@ -4,9 +4,9 @@ layout: nil
 <?xml version="1.0"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>克鲁斯卡尔的博客</title>
-    <link>http://novoland.github.io</link>
-    <atom:link href="http://novoland.github.io/rss.xml" rel="self" type="application/rss+xml" />
+    <title>fishedee的博客</title>
+    <link>http://www.fishedee.com</link>
+    <atom:link href="http://fishedee.github.io/rss.xml" rel="self" type="application/rss+xml" />
     <description>一个程序员</description>
     <language>zh-CN</language>
     <pubDate>{{ site.time | date: "%a, %d %b %Y %H:%M:%S %z" }}</pubDate>
@@ -15,10 +15,10 @@ layout: nil
     {% for post in site.posts limit:10 %}
     <item>
       <title>{{ post.title }}</title>
-      <link>http://novoland.github.io{{ post.url }}</link>
+      <link>http://fishedee.github.io{{ post.url }}</link>
       <pubDate>{{ post.date | date_to_string }}</pubDate>
-      <author>克鲁斯卡尔</author>
-      <guid>http://novoland.github.io{{ post.id }}</guid>
+      <author>fishedee</author>
+      <guid>http://fishedee.github.io{{ post.id }}</guid>
       <description>{{ post.content | xml_escape }}</description>
     </item>
     {% endfor %}
