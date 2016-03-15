@@ -1,5 +1,12 @@
-markdown: kramdown
+#基础信息
+title: fishedee的博客
+email: 306766045@qq.com
+url: localhost:4000
+avatar: http://image.fishedee.com/FulTCoakq411USQX_3HiZ79_fH0i
+description: 一个安静的程序猿
 
+#文档配置
+markdown: kramdown
 kramdown:
   input: GFM
   extensions:
@@ -10,3 +17,10 @@ kramdown:
   syntax_highlighter: rouge
   coderay:
     coderay_line_numbers:  nil
+
+#评论配置
+disqus: 
+  shortname: fishedee
+  identifier: blog
+
+

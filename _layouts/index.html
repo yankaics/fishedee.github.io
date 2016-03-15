@@ -15,28 +15,17 @@
   <body>
     <aside id="sidebar">
       <nav id="tags">
-        <a href="/index.html" id="avatar"></a>
+        <a href="/index.html" id="avatar" style="background:url({{site.avatar}});background-size:100px 100px;"></a>
 
         <ul id="tags__ul">
           <li id="js-label1" class="tags__li tags-btn active">所有文章 <span class="post_count"></span></li>
           {% for category in site.categories %}
             <li id="js-label{{forloop.index | plus:1 }}" class="tags__li tags-btn">{{ category | first }}<span class="post_count"></span></li>
           {% endfor %}
-        <!--
-          <li id="js-label2" class="tags__li tags-btn">并发<span class="post_count"></span></li>
-          <li id="js-label3" class="tags__li tags-btn">jvm<span class="post_count"></span></li>
-          <li id="js-label4" class="tags__li tags-btn">算法<span class="post_count"></span></li>
-          <li id="js-label5" class="tags__li tags-btn">数据库<span class="post_count"></span></li>
-          <li id="js-label6" class="tags__li tags-btn">cache<span class="post_count"></span></li>
-          <li id="js-label7" class="tags__li tags-btn">c和os<span class="post_count"></span></li>
-          <li id="js-label8" class="tags__li tags-btn">网络<span class="post_count"></span></li>
-          <li id="js-label9" class="tags__li tags-btn">工作<span class="post_count"></span></li>
-          <li id="js-label10" class="tags__li tags-btn">设计<span class="post_count"></span></li>
-        -->
         </ul>
 
         <div id="tags__bottom">
-          <a href="mailto:novohust@163.com" id="icon-email" class="tags-btn fontello"></a>
+          <a href="mailto:{{ site.email }}" id="icon-email" class="tags-btn fontello"></a>
           <a href="/rss.xml" id="icon-feed" class="tags-btn fontello"></a>
         </div>
       </nav> <!-- end #tags -->
@@ -75,7 +64,10 @@
       <span id="post__toc-title">目录</span>
       <ul id="post__toc-ul"></ul>
     </div>
-
+    <script>
+        window.disqus_shortname = '{{ site.disqus.shortname }}';
+        window.disqus_identifier = '{{ site.disqus.identifier }}';
+    </script>
     <script src="/assets/js/jquery-2.0.3.min.js"></script>
     <script src="/assets/js/jquery.pjax.js"></script>
     <script src="/assets/js/nprogress.js"></script>

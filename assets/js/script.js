@@ -147,8 +147,6 @@ function afterPjax() {
   var ds_loaded = false,
       top = $('#disqus_thread').offset().top;
       identifier = $('#post__title').data('identifier');
-  window.disqus_shortname = 'novoland';
-  window.disqus_identifier = identifier;
 
   function check() {
     if ( !ds_loaded && container.scrollTop() + container.height() > top ) {
