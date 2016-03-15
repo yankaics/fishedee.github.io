@@ -142,7 +142,6 @@ function afterPjax() {
         reload: true,
         config: function () {
             this.page.identifier = $('#post__content').data('identifier');
-            this.page.url = $('#post__content').data('url');
             this.page.title = $('#post__content').data('title');
         }
     });
