@@ -19,6 +19,10 @@
 
         <ul id="tags__ul">
           <li id="js-label1" class="tags__li tags-btn active">所有文章 <span class="post_count"></span></li>
+          {% for category in site.categories %}
+            <li id="js-label{{forloop.index | plus:1 }}" class="tags__li tags-btn">{{ category | first }}<span class="post_count"></span></li>
+          {% endfor %}
+        <!--
           <li id="js-label2" class="tags__li tags-btn">并发<span class="post_count"></span></li>
           <li id="js-label3" class="tags__li tags-btn">jvm<span class="post_count"></span></li>
           <li id="js-label4" class="tags__li tags-btn">算法<span class="post_count"></span></li>
@@ -28,6 +32,7 @@
           <li id="js-label8" class="tags__li tags-btn">网络<span class="post_count"></span></li>
           <li id="js-label9" class="tags__li tags-btn">工作<span class="post_count"></span></li>
           <li id="js-label10" class="tags__li tags-btn">设计<span class="post_count"></span></li>
+        -->
         </ul>
 
         <div id="tags__bottom">

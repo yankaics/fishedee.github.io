@@ -1,8 +1,12 @@
-markdown: redcarpet
-redcarpet:
-  extensions: ["no_intra_emphasis", "fenced_code_blocks", "autolink", "tables", "with_toc_data"]
+markdown: kramdown
 
-pygments: true
-# markdown:kramdown
-
-# highlighter: pygments
+kramdown:
+  input: GFM
+  extensions:
+    - autolink
+    - footnotes
+    - smart
+  enable_coderay: true
+  syntax_highlighter: rouge
+  coderay:
+    coderay_line_numbers:  nil
