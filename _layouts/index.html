@@ -67,9 +67,11 @@
       <span id="post__toc-title">目录</span>
       <ul id="post__toc-ul"></ul>
     </div>
+    <!--jquery-->
     <script src="/assets/js/jquery-2.0.3.min.js"></script>
     <script src="/assets/js/jquery.pjax.js"></script>
     <script src="/assets/js/nprogress.js"></script>
+    <!--自由代码-->
     <script>
         window['tag1'] = $('.pl__all'),
         {% for category in site.categories %}
@@ -77,6 +79,7 @@
         {% endfor %}
     </script>
     <script src="/assets/js/script.js"></script>
+    <!--评论框-->
     <script>
       /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
       var disqus_shortname = '{{ site.disqus }}';
@@ -91,6 +94,17 @@
           (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
       })();
     </script>
+    <!--百度统计-->
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?{{ site.baidu }}";
+      var s = document.getElementsByTagName("script")[0]; 
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+    <!--latex公式-->
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
   </body>
 </html>
