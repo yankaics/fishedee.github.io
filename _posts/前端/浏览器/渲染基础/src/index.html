@@ -1,0 +1,74 @@
+<!DOCTYPE>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<title>浏览器渲染基础</title>
+		<style>
+			*{
+				margin:0px;
+				padding:0px;
+			}
+			#control{
+				position:absolute;
+				left:0px;
+				top:0px;
+				bottom:0px;
+				width:50%;
+				height:100%;
+				border:1px solid black;
+			}
+			#input{
+				position:absolute;
+				top:0px;
+				bottom:50px;
+				left:0px;
+				right:0px;
+				width:100%;
+				font-size:16px;
+			}
+			#button{
+				position:absolute;
+				bottom:10px;
+				left:0px;
+				right:0px;
+				width:100px;
+				height:30px;
+				margin:0 auto;
+			}
+			#canvas{
+				position:absolute;
+				right:0px;
+				top:0px;
+				bottom:0px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="control">
+			<textarea id="input"></textarea>
+			<button id="button">刷新</button>
+		</div>
+		<canvas id="canvas"></canvas>
+		<script src="index.js"></script>
+		<script>
+			var Input = document.getElementById('input');
+			var Button = document.getElementById('button');
+			Input.value = ''+
+				'<table column="2" row="2">\n'+
+					'\t<table column="2" row="2">\n'+
+						'\t\t<span color="red">123</span>\n'+
+						'\t\t<span>456</span>\n'+
+						'\t\t<span fontSize="28px">789</span>\n'+
+						'\t\t<span>0AB</span>\n'+
+					'\t</table>\n'+
+					'\t<span>456</span>\n'+
+					'\t<span>789</span>\n'+
+					'\t<span>0AB</span>\n'+
+				'</table>';
+			Button.onclick = function(){
+				Canvas.update(Input.value);
+			};
+			Canvas.update(Input.value);
+		</script>
+	</body>
+</html>

@@ -1,0 +1,42 @@
+---
+layout: post
+category: 前端
+---
+
+# 1.概述烘焙帮前端开发规范
+# 2.框架![](/assets/img/14580510283485.jpg)
+前端使用的是MVP框架
+# 3.文件夹![](/assets/img/14580510345228.jpg)
+views视图controllers 控制器models 模型config 路由与颜色app mvc系统框架以及ajax，url等工具类
+# 4.唯一id生成规范
+
+```$.uniqueNum()
+```
+# 5.url参数规范
+
+```//get参数$.location.getQueryArgv(name)//url位置参数$.location.getSegment(name)
+```
+# 6.页面跳转规范
+
+```//新建页面$.page.go(url);//返回页面 $.page.back();//切换当前页面 $.page.replace(url);
+```
+# 7.ajax访问规范
+
+```//get请求$.get(url,param,callback);//post请求$.post(url,param,callback);
+```
+注意，callback默认已经做好了JSON解析操作，callback取得的就已经是object，而不是string，不需要再JSON.parse操作了。# 8.视图开发规范
+## 8.1.命名![](/assets/img/14580510695113.jpg)
+views文件夹放视图文件，每个文件代表一个页面，页面的公共组件放在子文件夹，例如是components,sections,widgets等等，具体子文件夹的名字可以自己按照需要设定。视图页面文件的命名为：首字母小写驼峰写法,View结尾例如indexView,clientView等等
+## 8.2.逻辑创建视图类，Views.createClass业务数据变动，this.action(方法名，方法参数...)。
+## 8.3.注意尽可能复用子视图组件，减少冗余代码的出现。View层的列表控件都必须带上key值，key字段由model层负责生成业务数据变动，this.action(方法名，方法参数...)，切记尽量不使用setState,setProps,forceUpdate等方法。区分业务数据的方法很直接，如果这个数据来自于后台，或者之后会上传到后台，那么这个数据就是业务数据，否则就是UI数据。更改UI数据，可以使用setState或setProps，但是更改业务数据，用的是this.action。# 9.控制器开发规范
+## 9.1.命名![](/assets/img/14580510794648.jpg)
+controllers文件夹放控制器文件，每个文件代表一个页面的控制器，要注意每个控制器代表一个页面，一个控制器也对应一个视图。视图页面文件的命名为：首字母小写驼峰写法,Controller结尾例如indexController,clientController等等一个controller对应一个view，而且名字匹配，例如indexController=>indexView,clientController=>clientView切勿出现indexController=>clientView的情况
+## 9.2.逻辑创建控制器类，Controllers.createClass控制器六个回调,onCreate,onPause,onResume,onDestroy,render,initialize加载视图类，this.loadView(viewClass)加载模型类，this.loadModel(modelClass,modelName)
+## 9.3.注意控制器类切勿放入视图逻辑，例如，不同的状态显示不同的icon，那么控制器吐出数据应该是状态的枚举值，而不是icon的url。控制器不负责通知模型变动，切勿直接调用$.page.update(this)！控制器与模型只处理业务数据，不处理UI数据。UI数据与业务数据的区分由视图中的注意点中显示。
+# 10.模型开发规范
+## 10.1.命名
+![](/assets/img/14580510959008.jpg)
+models文件夹放模型文件，每个文件代表一个业务的模型。模型页面文件的命名为：首字母小写驼峰写法,Model结尾例如recipeModel,recipeMaterialModel等等
+## 10.2.逻辑创建模型：Models.createClass模型一个回调：initialize模型刷新：this.change();
+## 10.3.注意对于列表数据，必须生成key数值，生成的方法很简单，$.uniqueNum()
+
