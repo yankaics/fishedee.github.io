@@ -71,13 +71,27 @@
     <script src="/assets/js/jquery.pjax.js"></script>
     <script src="/assets/js/nprogress.js"></script>
     <script>
-        window.disqus_shortname = '{{ site.disqus }}';
         window['tag1'] = $('.pl__all'),
         {% for category in site.categories %}
         window['tag{{ forloop.index | plus:1 }}'] = $('.{{category | first }}');
         {% endfor %}
     </script>
     <script src="/assets/js/script.js"></script>
+    <script>
+      /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+      var disqus_shortname = '{{ site.disqus }}';
+      var disqus_identifier = '{{ page.id }}-{{ page.title }}';
+      var disqus_url = '{{page.url}}';
+      var disqus_config = function () { 
+        this.language = "en";
+      };
+      /* * * DON'T EDIT BELOW THIS LINE * * */
+      (function() {
+          var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+          dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      })();
+    </script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
   </body>
 </html>
