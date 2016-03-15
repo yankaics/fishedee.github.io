@@ -67,13 +67,17 @@
       <span id="post__toc-title">目录</span>
       <ul id="post__toc-ul"></ul>
     </div>
-    <script>
-        window.disqus_shortname = '{{ site.disqus.shortname }}';
-        window.disqus_identifier = '{{ site.disqus.identifier }}';
-    </script>
     <script src="/assets/js/jquery-2.0.3.min.js"></script>
     <script src="/assets/js/jquery.pjax.js"></script>
     <script src="/assets/js/nprogress.js"></script>
+    <script>
+        window.disqus_shortname = '{{ site.disqus.shortname }}';
+        window.disqus_identifier = '{{ site.disqus.identifier }}';
+        window['tag1'] = $('.pl__all'),
+        {% for category in site.categories %}
+        window['tag{{ forloop.index | plus:1 }}'] = $('.{{category | first }}');
+        {% endfor %}
+    </script>
     <script src="/assets/js/script.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
   </body>

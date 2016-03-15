@@ -1,18 +1,15 @@
 ---
 layout: post
-title: 关于我
+title: fishedee的博客
 ---
 
-华中科技大学软件硕士毕业，混迹过不知名小公司 / 网易 / 阿里巴巴，目前在美团猫眼做后台开发。喜欢写代码，更喜欢做东西，自娱自乐。爱好 dota（天梯1100分的水平），皮艺手工（做了几个钱包）。近期最大的目标是把体重提高到 130。
+# 关于我
+
+中山大学软件学院本科毕业，混迹过 腾讯 / 京东，目前在一家很小的互联网公司创业，任技术总监。喜欢烘焙的朋友们可以关注下我们的[烘焙帮](http://a.app.qq.com/o/simple.jsp?pkgname=com.hongbeibang.app)app。
 
 # 关于这个博客
 
-托管在 github，模板使用 [3-jekyll](https://github.com/P233/3-Jekyll)
-这里大部分是我平常总结的笔记，从 evernote 同步过来的，写了个[python 脚本](https://github.com/novoland/blog/blob/master/evernote-sync/main.py)干这事儿。大部分属于原创，如果有参考文档会尽量写在博客里，[这里](https://github.com/novoland/blog/blob/master/evernote-sync/settings.py)可以看到我所有公开的笔记。
+* jekyll静态博客工具
+* [novoland.github.io](http://novoland.github.io)的博客样式，感谢你的模板主题，是我见过最自然帅气的jekyll模板。
+* mweb的markdown编辑器，粘贴图片时自动复制到/assets/img文件夹，比较方便。
 
-博客使用的工具：
-
-* [马克飞象](http://maxiang.info)
-* [3-jekyll](https://github.com/P233/3-Jekyll)
-* python
-* [Evernote](http://evernote.com)

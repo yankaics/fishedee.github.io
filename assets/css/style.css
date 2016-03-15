@@ -522,6 +522,7 @@ pre {
   background-color: #23241f !important;
   border-radius: 0 !important; }
   pre code {
+    color: #93a1a1;
     white-space: pre !important; }
 
 #post__toc {

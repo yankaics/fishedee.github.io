@@ -1,0 +1,7 @@
+---
+layout: post
+category: 安卓
+---
+
+> gradle是下一代的Java代码构建工具，也是安卓项目的默认构建工具。
+

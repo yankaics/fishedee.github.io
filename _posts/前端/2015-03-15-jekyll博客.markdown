@@ -1,0 +1,65 @@
+---
+layout: post
+category: 前端
+---
+
+> 尝鲜了一下用jekyll写博客，的确很方便呢。而且github原生支持jekyll，可以直接将jekyll规范到文件扔到github，就能实现一个博客了。
+
+# 什么原理
+jekyll的本质仍然是一个静态文件组成的博客。用户按照规范编写好jekyll的文件，然后执行一下jekyll serve，jekyll程序就会将其转化为一个纯静态页面的博客，然后就呈现出来。github page的原理也是一样，在用户上传代码后，执行一次jekyll，将用户输入的文件转化为静态网页，然后呈现出来。
+
+# 怎么工作
+jekyll启动后，首先获取根目录上的_config.yml文件，获取网站的配置信息。然后遍历所有带有yaml头部的文件，然后根据yaml头部的信息来生成页面。
+
+## _config.yml
+
+``` python
+title: Your awesome title
+email: your-email@domain.com
+description: > # this means to ignore newlines until "baseurl:"
+  Write an awesome description for your new site here. You can edit this
+  line in _config.yml. It will appear in your document head meta (for
+  Google search results) and in your feed.xml site description.
+baseurl: "" # the subpath of your site, e.g. /blog
+url: "http://yourdomain.com" # the base hostname & protocol for your site
+twitter_username: jekyllrb
+github_username:  jekyll
+
+# Build settings
+markdown: kramdown
+```
+
+这是一段默认的_config.xml的信息，描述了博客的拥有者信息，域名信息，还有就是markdown的引擎等等。
+
+## yaml头
+``` python
+--- 
+layout: post
+title: Blogging Like a Hacker
+---
+```
+这是一段典型的yaml头部信息，指定了该网页是layout文件夹中post布局来生成，title为”Blogging Like a Hacker“
+
+## 网页
+
+约定建立的html后缀为html格式的文件，markdown后缀的为markdown格式的文件。
+并且_posts文件中的网页文件为site.post文件。
+其他位置的网页文件为site.page文件。
+
+## 变量
+常见使用的变量放在[这里](http://jekyll.bootcss.com/docs/variables/)有详细介绍，我就不多说了。
+
+## 模板引擎
+jekyll使用的模板引擎是Liquid，简单暴力。模板引擎的使用可以参看[基础用法](http://blog.csdn.net/dont27/article/details/38097581)[常见用法](https://segmentfault.com/a/1190000000406017)
+
+# 绑定到github
+例如，我要将顶级域名fishedee.com绑定到github.fishedee.io，方法是在github的目录下写上一个CNAME，内容为fishedee.com，然后将fishedee.com建立A的DNS，指向到github.fishdee.io的IP上即可。
+
+# 装逼之旅
+
+一般情况下，jekyll的配置大家都是差不多的，其实也就是换换主题，一般情况下都是在github上看别人的主题有什么好看的，直接fork。然后将自己的_posts的复制过去就完事了。[这里](http://jekyll.bootcss.com/docs/sites/)有很多推荐的主题，但愿大家看到好看的，fork以后就能装逼成功了～。
+
+
+# 总结
+让轮子滚起来，不要再自己写博客了。
+

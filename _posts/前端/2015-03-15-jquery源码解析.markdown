@@ -1,0 +1,92 @@
+---
+layout: post
+category: 前端
+---
+
+> jquery 源码解析，参看代码是jquery 3.0版本
+
+# jquery.js
+入口jQuery.js包含core.js，以及jquery的各类功能的组合，包括selector，ajax等等
+
+然后将jquery对象导出到全局的jquery符号，以及$符号
+
+# core.js
+1. 确定jQuery对象是个函数，这个函数生成出来的数据是对象
+2. 建立jquery的prototype的函数中，包括each,map的映射操作，first,last,eq等的数组操作，end这类的操作栈功能
+3. 建立extend函数，这个函数可以组合两个对象，可以设置为深组合，或浅组合的方式。如果函数只有一个参数时，则将extend参数组合到当前对象上。
+4. 建立jquery的函数，包括一堆类型判断：isWindow，isNumeric，isPlainObject，isEmptyObject，type，以及一堆集合操作：each，makeArray,inArray,merge,grep,map,还有一些常用的操作：trim,proxy,guid
+
+总结：
+
+core.js的目的是，建立jquery的根本属性，它是一个函数，调用后返回一个元素数组。以及这两部分的常用操作，集合操作，字符串操作，函数操作等等。
+# var文件夹
+一堆关于类型判断，和获取数据的方法，封装是为了更好的兼容性。
+
+# core文件夹
+
+## DomEval.js
+动态执行某段js的代码，执行方式是在document的head建立一段script标签，而且script标签的内容为js代码，执行完毕后，将script标签删掉。
+
+为啥要这么做？因为这样做动态执行的js代码是保证在全局作用域上运行的，而eval执行的动态代码是跟执行位置有关，是在局部作用域上运行的。
+
+## parseHTML.js
+这里是从html字符串建立一个dom元素的实现，方法是，然后这个字符串是简单字符串，就用context.createElement实现，如果这个字符串是嵌套字符串，就用createDocumentFragment创建临时元素，然后将字符串设置到它的innerHTML下。再返回fragements的childNodes即可。
+
+## support.js
+这个是用来兼容Safari 8+下不能直接createElement的问题
+
+## ready.js
+这里是确定jquery的ready执行时机，主要是通过原生的document.addEventListener("DOMContentLoaded", xxx );和window.addEventListener("load", completed );来确定ready的加载时机的。这里还用了允许改变ready时机的方法holdReady。
+
+## init.js
+这里是jquery函数的核心，$()，这个函数执行的内容
+
+1. 如果第一个参数是个原生node，那么将它变成jQuery元素。
+2. 如果第一个参数是个函数，那么根据document.isReady的状态，来确定是否执行这个函数，还是说等待isReady后才执行这个函数。
+3. 如果第一个函数是个字符串，则继续分情况
+3. 1. 如果这个字符串前后带有尖括号，那么是要建立一个jquery元素,例如，这种$('<div>213</div>')。建立jquery元素的主要方法是用parseHTML.js建立原生dom元素，然后再合并到当前的jquery对象上。
+3. 2. 其他情况是走selector.js,将context下根据这个字符串查找对应的dom元素，例如，这种$('#id .mm')
+
+# selector.js
+很明显，这个文件是做dom查找操作的。selector的操作操作，有两个办法，一个是走jquery的sizzle引擎，一个是走浏览器的原生接口querySelectorAll的方法。
+
+## selector-sizzle.js
+这里就是直接将sizzle引擎包含进来了，然后将sizzle引擎的接口暴露为jquery对象的find,expr,uniqueSort,text,contains这些方法上了。这里就不多说了，需要另起一个谈sizzle引擎的实现。
+
+## selector-native.js
+* uniqueSort 根据节点的在dom的位置来排序，然后对节点去重，这里用到了原生的compareDocumentPosition方法
+* escape html的escape输出，用的是正则查找，然后替换。
+* find(selector, context,results) 在context下查找符合selector的元素，然后将结果与results合并，输出results，这里用到原生的querySelectorAll方法
+* text(elem) 获取elem的text值，递归合并元素的值或value，包含合并元素下的子元素
+* contains(a,b) 查找a元素是否包含b元素，通过不断地b元素回溯来确定a元素是否等于b元素。
+* matches( expr, elements ) 在elements中查找符合expr的elements列表，这里用到原生的matches或webkitMatchesSelector
+
+# traversing.js
+这个文件的作用是定义了一堆jquery元素的遍历方法
+
+这些
+
+* has(target) 确定当前元素是否有target选择器的东西
+* closest( selectors, context) 确定当前元素的祖先节点是否含有selectors指定的元素
+* index(elem) 确定elem元素在当前元素的哪个位置
+* add(selector,context) 将$(selector,context)添加到当前元素的后方
+* addBack(selector) 将前一元素进行selector的filter，然后添加到当前元素的后方
+
+还有这些
+
+* parent 直系父亲
+* parents 所有父亲
+* parentsUntil 所有父亲，直到unitl
+* next 后一个兄弟元素
+* prev 前一个兄弟元素
+* nextAll 后面所有的兄弟元素
+* prevAll 前面所有的兄弟元素
+* nextUntil 后面所有的兄弟元素，直到unitl
+* prevUntil 前面所有的兄弟元素，直到until
+* siblings 所有的兄弟元素
+* children 第一层的子元素 
+* contents 所有层的子元素
+
+
+
+
