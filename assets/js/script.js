@@ -138,11 +138,13 @@ function afterPjax() {
   // http://jsfiddle.net/dragoncrew/SHGwe/1/
   
   var ds_loaded = false;
-
+  window.disqus_identifier = $('#post__content').attr('class');
   function check() {
     if( ds_loaded){
       return;
     }
+
+
     $.ajax({
       type: 'GET',
       url: 'http://' + disqus_shortname + '.disqus.com/embed.js',

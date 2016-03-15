@@ -19,8 +19,6 @@ kramdown:
     coderay_line_numbers:  nil
 
 #评论配置
-disqus: 
-  shortname: fishedee
-  identifier: blog
+disqus: fishedee
 
 
