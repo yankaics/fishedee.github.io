@@ -1,0 +1,94 @@
+---
+layout: post
+category: 前端
+---
+
+# 1.概述reactjs使用概述
+# 2.介绍reactjs促进了前端模块化，以及数据驱动UI模型的发展。具体的sample可以看代码。
+## 2.1.state与props简单来说，props是每个组件的属性，state是每个组件的状态。换句话说，props是组件对外的接口，state是组件对内的接口。例如，对于一个上传图片组件，图片的链接是他的属性，但上传进度（百分比）是他的状态。
+# 3.原理## 3.1.生命周期//Class创建getDefaultProps＝》//组件创建getInitialState＝》componentWillMount＝》rendercomponentDidMount＝》//组件数据变化componentWillReceiveProps＝》shouldComponentUpdate＝》componentWillUpdate＝》rendercomponentDidUpdate＝》//组件释放componentWillUnmount
+## 3.2.虚拟dom比较### 3.2.1.概述reactjs的虚拟dom比较方式其实是很傻逼的，必要时你需要做些许的优化。这种傻逼的比较方式不得不说是对性能的妥协O(n3)=>O(n)
+### 3.2.2.节点比较#### 3.2.2.1.节点类型renderA: 
+```
+<div/>
+```renderB: 
+```
+<span/>
+```
+=>:```[removeNode <div/>],[insertNode <span/>]
+```renderA:
+```
+<Header/>
+```renderB:
+```
+<Content/>
+```=>:
+```
+[removeNode<Header/>],[insertNode <Content/>]
+```
+#### 3.2.2.2.节点属性renderA: 
+```
+<div id=”before”/>
+```renderB: 
+```
+<div id=”after”/>
+```=>
+```
+[replaceAttribute id “after”]
+```
+#### 3.2.2.3.节点样式renderA:
+```
+<div style={{color:’red’}}/>
+```renderB:
+```
+<div style={{fontWeight:’bold’}}/>
+```=>
+```
+[removeStyle color],[addStyle font-weight ‘bold’]
+```
+### 3.2.3.列表比较#### 3.2.3.1.后加renderA: 
+```
+<div><span>first</span></div>
+```renderB:
+```
+<div><span>first</span><span>second</span></div>
+```=>
+```
+[insertNode <span>second</span>]
+```
+#### 3.2.3.2.前加renderA: 
+```
+<div><span>first</span></div>
+```renderB:
+```
+<div><span>second</span><span>first</span></div>
+```=>
+```
+[replaceAttribute textContent ‘second’][insertNode <span>first</span>]
+```### 3.2.4.优化#### 3.2.4.1.key确定renderA:
+```
+<div><span key=”first”>first</span></div>
+```renderB: 
+```
+<div><span key=”second”>second</span><span key=”first”>first</span></div>
+```=>
+```
+[insertNode <span>second</span>]
+```
+#### 3.2.4.2.本地数据比较
+![](/assets/img/14580358026138.jpg)
+实现shouldComponentUpadte函数，指定reactjs是否需要更新这个虚拟dom，从而避免渲染一棵树。
+```javascriptshouldComponentUpdate: function(nextProps, nextState) {  return true;}
+```很明显，有个很简单的方法来实现这个shouldComponentUpdate的方法，就是通过比较前后的props与state来确定是否需要渲染这颗树。
+```javascriptshouldComponentUpdate: function(nextProps, nextState) {  return this.props.value !== nextProps.value;}
+```这个方法实在太常用，如果每次都要这么写，会很痛苦，还好react给我们提供了pureRenderMixin
+```javascriptvar PureRenderMixin = require('react/addons').addons.PureRenderMixin;React.createClass({  mixins: [PureRenderMixin],  render: function() {    return <div className={this.props.className}>foo</div>;  }});
+```
+但是，pureRenderMixin对于muttable的数据，容易生成出不合法的结果。![](/assets/img/14580358163983.jpg)
+解决方案很简单，永远不要直接修改this.state或this.props。附上，pureRenderMixin的方法![](/assets/img/14580358235664.jpg)
+
+![](/assets/img/14580358272636.jpg)
+[1.2s=>0.12s的差别](http://kenev.net/2015/03/08/react-purerendermixin-performance-simple-overview/)# 4.规范## 4.1.数据驱动渲染UI中的component的数据，只能来自于props,state，或者常量，不能来自于其他莫名的地方。对于组件自身来说，外部的变量为props，内部的变量为state。渲染列表数据，必须要加上key。
+## 4.2.数据变动数据变动时不能直接修改this.state，或者this.props，只能用setState或setProps，除了顶级页面可以用setProps，组件等都不能用setProps。 
+## 4.3.数据变化通知组件由于用户输入造成数据变化时，只需要简单地回调函数onTextChange( data )以通知上级组件数据变动即可。
+
