@@ -1,0 +1,28 @@
+---
+layout: post
+category: 前端
+---
+
+# 1.概述js的回调地狱，javascript是一个异步的框架，异步思想在UI中有很直观的想法，但是在业务逻辑上，异步却是一个噩梦。
+# 2.问题假设我们要实现这样的一个需求。异步获取一个json配置，解析json数据拿到里边的图片，然后按顺序队列加载图片，没张图片加载时给个loading效果# 3.普通做法
+
+```function getData(next){    $.get( url,{},function(){        if( data.code != 0 ){            $.dialog.message(data.msg);            return;        }        next(data);    });}function loadImage(src,next){    var image = new Image;    image.onerror = function(){        $.dialog.message('加载图片失败');        return;    }    image.onload = function(){        next();    }    image.src = src;}function loadImageList(currentLoad,result){    if( currentLoad == result.length ){        return;    }    loadImage(result[currentLoad],loadImageList.bind(currentLoad+1,result));}function main(){    getData(function( result ){        loadImageList(0,result);    });}main();
+```
+
+解决：通过回调函数来层叠多个操作
+问题：无法统一处理错误，回调多，难懂
+# 4.更好做法
+
+```function getData(){    return new Promise(function(resolve,reject){        $.get( url,{},function(){            if( data.code != 0 ){                reject(data.msg);                return;            }            resolve(data);        });    });}function loadImage(src){    return new Promise(function(resolve,reject){        var image = new Image;        image.onerror = function(){            reject('加载图片失败');            return;        }        image.onload = function(){            resolve();        }        image.src = src;    });}function main(){    var promise = getData();    promise.then(function(result){        var newPromise2 = Promise.resolve();        for( var i = 0 ; i != result.length ; ++i ){            loadImage.then( loadImage.bind(result2[i]) );        }        return loadImage;    });    promise.then(function(){        alert('加载完成');    });    promise.reject(function(error){        alert('加载失败 '+error);    });}main();
+```
+
+解决：通过promise来层叠多个操作
+问题：顺序化处理，但还是难理解
+# 5.非常好的做法
+```
+function getData(){    return new Promise(function(resolve,reject){        $.get( url,{},function(){            if( data.code != 0 ){                reject(data.msg);                return;            }            resolve(data);        });    });}function loadImage(src){    return new Promise(function(resolve,reject){        var image = new Image;        image.onerror = function(){            reject('加载图片失败');            return;        }        image.onload = function(){            resolve();        }        image.src = src;    });}async function main(){    try{        var result = await getData();        for( var i = 0 ; i != result.length ; ++i ){            await loadImage(result[i]);        }        alert('加载成功');    }catch(e){         alert('加载失败'+e);    }}
+```
+
+解决：通过async,await来层叠多个操作
+问题：简单，易懂，需要兼容性
+

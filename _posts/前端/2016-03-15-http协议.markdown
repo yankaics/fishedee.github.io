@@ -1,0 +1,105 @@
+---
+layout: post
+category: 前端
+---
+
+# 1.概述讲述HTTP协议
+# 2.应用层协议
+
+![](/assets/img/14580421489475.jpg)
+http与https都是运行在应用层的协议，其下面分别是运输层TCP，网络层IP，链路层MAC，和物理层
+# 3.请求响应模型
+
+![](/assets/img/14580421562508.jpg)
+这样就限制了使用HTTP协议，无法实现在客户端没有发起请求的时候，服务器将消息推送给客户端。HTTP协议是一个无状态的协议，同一个客户端的这次请求和上次请求是没有对应关系。
+# 4.工作流程![](/assets/img/14580421665144.jpg)
+一次HTTP操作称为一个事务，其工作过程可分为四步：
+1. 浏览器解析url，使用dns协议将域名转换为IP地址2. 首先客户机与服务器的80端口建立TCP连接。3. 建立连接后，客户机发送一个HTTP请求协议包给服务器，请求方式的格式为：统一资源标识符（URL）、协议版本号，后边是MIME信息包括请求修饰符、客户机信息和可能的内容。4. 服务器接到请求后，给予相应的响应信息，其格式为一个状态行，包括信息的协议版本号、一个成功或错误的代码，后边是MIME信息包括服务器信息、实体信息和可能的内容。5. 客户端接收服务器所返回的信息通过浏览器显示在用户的显示屏上，然后客户机与服务器断开连接。
+如果在以上过程中的某一步出现错误，那么产生错误的信息将返回到客户端，有显示屏输出。对于用户来说，这些过程是由HTTP自己完成的，用户只要用鼠标点击，等待信息显示就可以了。
+# 5.协议字段
+## 5.1.基本结构
+HTTP协议无论是请求报文(request message)还是回应报文(response message)都分为四部分：
+* 报文头 (initial line )* 0个或多个header line* 空行(作为header lines的结束)* 可选body## 5.2.请求报文![](/assets/img/14580421848861.jpg)
+这是首页的/login/islogin的请求报文
+
+|选项|字段|值|
+|:--|:--|:--|
+|报文头|请求方式|GET|
+||URL|/login/islogin|||协议|HTTP/1.1|
+|报文选项|Host|www.hongbeibang.com|
+||Connection|Keep-alive|||User-Agent|Mozilla/5.0 …||空行|空||
+|报文体|空||## 5.3.响应报文![](/assets/img/14580428250389.jpg)
+这是首页的/login/islogin的响应报文|选项|字段|值|
+|:--|:--|:--||报文头|协议|HTTP/1.1|||状态码|200|||状态描述|OK||报文选项|Server|nginx|||Date|Sat, 10 Oct…|
+||Connection|Keep-alive||空行|空||
+|报文体|{code:0,msg:’’,data:null}||# 6.请求方式
+|请求方式|描述|参数|
+|:--|:--|:--||GET|通过请求URI得到资源|参数只可以放在url上||POST|用于添加新的内容|参数可以放在url上或body上||PUT|用于修改某个内容|参数可以放在url上或body上||DELETE|删除某个内容|参数只可以放在url上||HEAD|类似于GET, 但是不返回body信息，用于检查对象是否存在，以及得到对象的元数据|类似于GET, 但是不返回body信息，用于检查对象是否存在，以及得到对象的元数据|
+思考，什么时候用post，什么时候用get
+# 7.响应码一些常见的http状态返回代码为：200 - 服务器成功返回网页404 - 请求的网页不存在503 - 服务不可用![](/assets/img/14580429200134.jpg)
+# 8.缓存机制
+## 8.1.概述讲述HTTP的缓存机制，HTTP的缓存有四种方式，分别是，expires,cache-control,last-modified,etag
+## 8.2.总体
+
+![](/assets/img/14580429281265.jpg)## 8.3.Last-Modify在浏览器第一次请求某一个URL时，服务器端的返回状态会是200，内容是你请求的资源，同时有一个Last-Modified的属性标记(HttpReponse Header)此文件在服务期端最后被修改的时间，格式类似这样：Last-Modified:Tue, 24 Feb 2009 08:01:04 GMT客户端第二次请求此URL时，根据HTTP协议的规定，浏览器会向服务器传送If-Modified-Since报头(HttpRequest Header)，询问该时间之后文件是否有被修改过：If-Modified-Since:Tue, 24 Feb 2009 08:01:04 GMT如果服务器端的资源没有变化，则自动返回HTTP304（NotChanged.）状态码，内容为空，这样就节省了传输数据量。当服务器端代码发生改变或者重启服务器时，则重新发出资源，返回和第一次请求时类似。从而保证不向客户端重复发出资源，也保证当服务器有变化时，客户端能够得到最新的资源。注：如果If-Modified-Since的时间比服务器当前时间(当前的请求时间request_time)还晚，会认为是个非法请求![](/assets/img/14580429380742.jpg)
+刚开始执行时，返回200，以及Last-Modified信息![](/assets/img/14580429449368.jpg)
+下一次执行时F5刷新时，浏览器会传送If-Modified-Since信息，服务器对比文件的修改时间，如果没有发生变化的话，直接返回304信息。![](/assets/img/14580429526204.jpg)
+下一次执行时F5刷新时，浏览器会传送If-Modified-Since信息，服务器对比文件的修改时间，如果发生变化的话，会返回新的HTML内容，并返回200返回码，以及新的Last-Modify
+![](/assets/img/14580429604383.jpg)
+下一次执行时Ctrl-F5刷新时，浏览器不会传送If-Modified-Since信息，服务器不对比文件的修改时间，直接返回新的HTML内容，并返回200返回码，以及文件的Last-Modify
+## 8.4.EtagLast-Modify的问题在于，他通过文件的修改时间来判断数据有没有修改，那么对于动态请求就根本无法被缓存，而且如果静态文件内容从未被修改，而仅仅是更新了修改时间，也会造成击穿缓存，相当的忧伤，所以HTTP引入了etag字段。HTTP协议规格说明定义ETag为“被请求变量的实体标记”（参见14.19）。简单点即服务器响应时给请求URL标记，并在HTTP响应头中将其传送到客户端，类似服务器端返回的格式：Etag:“5d8c72a5edda8d6a:3239″客户端的查询更新格式是这样的：If-None-Match:“5d8c72a5edda8d6a:3239″如果ETag没改变，则返回状态304。即:在客户端发出请求后，HttpReponse Header中包含Etag:“5d8c72a5edda8d6a:3239″标识，等于告诉Client端，你拿到的这个的资源有表示ID：5d8c72a5edda8d6a:3239。当下次需要发Request索要同一个URI的时候，浏览器同时发出一个If-None-Match报头(Http RequestHeader)此时包头中信息包含上次访问得到的Etag:“5d8c72a5edda8d6a:3239″标识。If-None-Match:“5d8c72a5edda8d6a:3239“,这样，Client端等于Cache了两份，服务器端就会比对2者的etag。如果If-None-Match为False，不返回200，返回304(Not Modified) Response。ETag的静态内容处理跟Last-Modify一样，这里就不多说了，我们来尝试加一个为动态请求加一个ETag，节省HTTP资源。
+
+```<?php	$data = 'Hello World2';	$etag = '"'.md5($data).'"';		header("Etag: $etag");	if (trim($_SERVER['HTTP_IF_NONE_MATCH']) == $etag) { 		header("HTTP/1.1 304 Not Modified"); 		exit; 	}	echo $data;?>
+```
+代码如上面所示。![](/assets/img/14580429840416.jpg)
+第一次执行时，返回200返回码，以及ETag![](/assets/img/14580429914317.jpg)
+下一次执行时，F5刷新，浏览器会将If-None-Match带着ETag来访问了，服务器一比较数据就发现是相同数据，直接返回304了，连body数据都不用传，炒鸡省事。![](/assets/img/14580429981484.jpg)
+跟Last-Modify一样，Ctrl-F5刷新时，直接拒绝缓存，连If-None-Match都没有传过来，只能老老实实地加上返回数据Body了。
+## 8.5.Expires给出的日期/时间后，被响应认为是过时。如Expires:Thu, 02 Apr 2009 05:14:08 GMT需和Last-Modified结合使用。用于控制请求文件的有效时间，当请求数据在有效期内时客户端浏览器从缓存请求数据而不是服务器端.当缓存中数据失效或过期，才决定从服务器更新数据。采用一个绝对时间来做资源的失效时间。![](/assets/img/14580430129021.jpg)
+第一次执行时返回Expires指定过期时间，并返回200状态码![](/assets/img/14580430193513.jpg)
+当第二次刷新时，直接从cache中读取，绕过了向服务器请求HTTP的304判断。## 8.6.Cache-ControlExpires = 时间，HTTP 1.0 版本，缓存的载止时间，允许客户端在这个时间之前不去检查（发请求）max-age = 秒，HTTP 1.1版本，资源在本地缓存多少秒。Cache-Control跟Exprires的机制相似，只是max-age用的相对数据，Expires用的是绝对时间，这里不多说了。
+## 8.7.优先级
+### 8.7.1.概述有趣的是，将各种缓存手段组合起来时会有很多意外的结果。
+### 8.7.2.Etag与last-ModifyEtag与last-Modify组合使用时，仅当服务器发现两者都没有改变时，才会返回304，否则会返回200。
+### 8.7.3.Expires与Cache-ControlExpires与Cache-Control组合使用时，Cache-Control会覆盖Expires的缓存控制，Expires值会被浏览器强制设置为“收到缓存的时间”+max-age
+### 8.7.4.Last-Modify与Expires只有Expires而没有Last-Modify时，Expires就会失效，起不到缓存的效果。
+### 8.7.5.ETag与Expires跟Last-Modify与Expires一样，没有Etag与Last-Modify任意一个，Expires不能起强制缓存效果。
+## 8.8.总结我们轻易地看出，ETag与Last-Modify都属于匹配缓存，Expires与Cache-Control都属于时间缓存，而ETag是根据文件内容的缓存，Last-Modify是根据修改时间的缓存，Expires与Cache-Control均是一样，只是单位不同。所以，有以下经验
+1.	Html页面请求最好只用Last-Modify字段，因为html页面是网站中的第一个页面，设置Expires，以及Cache-Control的话会让你更新资源时非常痛苦。2.	Html页面以外的静态请求最好只用Last-Modify，Expires，Cache-Control三者结合的缓存机制，静态文件数据量大时，etag算起来会耗费服务器时间，而且在分布式web中，同一个文件每台服务器的etag算起来不一定一样，容易击穿缓存。3.	动态请求最好用etag缓存，计算量少，而且不用考虑过期时间的问题，在大部分web业务中我们根本无法计算到这份数据会cache多久。（除非像电商这样的定时抢购业务中，你可以预料到什么时候开抢，这时数据cache多久完全是可以控制的，这是你可以考虑用静态请求的缓存模式）
+# 9.Cookie## 9.1.Set-Cookie
+
+```Set-Cookie：customer=huangxp; path=/foo; domain=.ibm.com; expires= Wednesday, 19-OCT-05 23:12:40 GMT; [secure]
+```Set-Cookie的每个属性解释如下：
+* Customer=huangxp 一个"名称＝值"对，把名称customer设置为值"huangxp"，这个属性在Cookie中必须有。 * path=/foo 控制哪些访问能够触发cookie 的发送。如果没有指定path，cookie 会在所有对此站点的HTTP 传送时发送。如果path=/directory，只有访问/directory 下面的网页时，cookie才被发送。在这个例子中，用户在访问目录/foo下的内容时，浏览器将发送此cookie。如果指定了path，但是path与当前访问的url不符，则此cookie将被忽略。 * domain=.ibm.com 指定cookie被发送到哪台计算机上。正常情况下，cookie只被送回最初向用户发送cookie 的计算机。在这个例子中，cookie 会被发送到任何在.ibm.com域中的主机。如果domain 被设为空，domain 就被设置为和提供cookie 的Web 服务器相同。如果domain不为空，并且它的值又和提供cookie的Web服务器域名不符，这个Cookie将被忽略。 * expires= Wednesday, 19-OCT-05 23:12:40 GMT 指定cookie 失效的时间。如果没有指定失效时间，这个cookie 就不会被写入计算机的硬盘上，并且只持续到这次会话结束。 * secure 如果secure 这个词被作为Set-Cookie 头的一部分，那么cookie 只能通过安全通道传输（目前即SSL通道）。否则，浏览器将忽略此Cookie。 
+一旦浏览器接收了cookie，这个cookie和对远端Web服务器的连续请求将一起被浏览器发送。例如 前一个cookie 被存入浏览器并且浏览器试图请求 URL http://www.ibm.com/foo/index.html 时，下面的HTTP 包头就被发送到远端的Web服务器。
+## 9.2.Cookie
+
+```GET /foo/index.html HTTP/1.0Cookie：customer=huangxp
+```
+在了解了Cookie协议的一些基本内容之后，让我们看看一次典型的网络浏览过程中浏览器如何识别和处理Cookie：
+* 浏览器对于Web服务器应答包头中Cookie的操作步骤：
+1. 从Web服务器的应答包头中提取所有的cookie。2. 解析这些cookie的组成部分（名称，值，路径等等）。3. 判定主机是否允许设置这些cookie。允许的话，则把这些Cookie存储在本地。 
+* 浏览器对Web服务器请求包头中所有的Cookie进行筛选的步骤：
+1. 根据请求的URL和本地存储cookie的属性，判断那些Cookie能被发送给Web服务器。2. 对于多个cookie，判定发送的顺序。3. 把需要发送的Cookie加入到请求HTTP包头中一起发送。 
+以上我们了解了在一个典型的浏览器与Web服务器交互的时候，Cookie的传递过程。下面我们将看到，如果在MTS代理网络浏览的过程中，不对Cookie进行修改，上面的Cookie传递过程将无法实现。# 10.推送
+## 10.1.短轮询![](/assets/img/14580431355093.jpg)
+客户端开定时器，每隔一段时间访问后台一次。优点：实时性差，开发简单，兼容性好缺点：资源消耗很大
+## 10.2.长轮询![](/assets/img/14580431410369.jpg)
+客户端请求后，服务器不直接返回数据，而是hold住连接不返回，等到超时了，或者有数据后再返回。下次客户端请求时再次使用同样的办法。优点：实时性好，兼容性好缺点：开发要求高，资源消耗大
+## 10.3.WebSocket![](/assets/img/14580431473236.jpg)
+WebSocket是全新的html5协议，专门用来解决http双工通信问题的。他只是一个套了socket外壳的类http协议，他并不是http协议。![](/assets/img/14580431649187.jpg)
+客户端与服务器进行握手认识，然后服务器一直推数据到客户端就可以了。优点：实时性好，资源消耗小缺点：开发难度高，需要与http协议分开开发，兼容性好
+## 10.4.总结在大型的网站上，使用http的long pooling技术做推送的比较普遍，稳定可靠，兼容性好。Websocket更多是用在新兴的创业公司上，要么不用，一用就是全站都是websocket通信，例如，Meteor.js，这是一个有趣的实时框架。
+# 11.编码
+## 11.1.概述http协议在创建时就考虑到了编码这个问题。注意，编码与格式是两个问题。一个是content-encoding，另外一个是content-type。格式是指html,css,javascrip,pmg等等这些mime指定格式。编码是指传输过程中的封包与解包编码方式，常用的有，gzip，deflate，sdch。注意编码格式中没有rar格式编码，毕竟这是私有协议的压缩方式，不会被用到http这样的通用协议上的
+## 11.2.过程
+![](/assets/img/14580431765559.jpg)
+1. 浏览器发送Http request 给Web服务器,  request 中有Accept-Encoding: gzip, deflate。 (告诉服务器， 浏览器支持gzip压缩)2. Web服务器接到request后， 生成原始的Response, 其中有原始的Content-Type和Content-Length。3. Web服务器通过Gzip，来对Response进行编码， 编码后header中有Content-Type和Content-Length(压缩后的大小)， 并且增加了Content-Encoding:gzip.  然后把Response发送给浏览器。4. 浏览器接到Response后，根据Content-Encoding:gzip来对Response 进行解码。 获取到原始response后， 然后显示出网页。
+## 11.3.配置![](/assets/img/14580431878418.jpg)
+nginx配置，简单暴力，没啥好说的。
+## 11.4.局限性gzip的压缩原理是将相同数据替换成单个更短的数据来实现的，例如html中的script用得比较多，那我就用sx来代替，那原来sx字母就用个不存在的sy代替了。然后建立一个表，将原始数据与替换数据的映射记录下来就ok了。这就是通用无损压缩算法的原理。至于script标签应该用sx，还是sxx来代替，跟script的使用频率，其他单词的使用频率有关，如何达成无损压缩的最大压缩比例，这是一个最优化问题，可以用哈夫曼树来解决，其本质是个贪心算法。Gzip压缩的对象应该是html,css,js等文本文件适用于gzip压缩，至于已经压缩过的png,jpg,gif的二进制文件则不应该使用gzip算法压缩，否则有可能导致压缩后的文件大小更大了。# 11.5.总结gzip压缩是目前http协议中最通用的编码方式，压缩后的文件一般为未压缩前的三分之一大小。所以，gzip是一个很重要的优化方式，可以轻松提高网站速度在3倍左右。![](/assets/img/14580432060971.jpg)
+开了压缩的js文件![](/assets/img/14580432129971.jpg)
+没有开压缩的图片# 12.局限Http协议是简单的无状态单向协议，其局限性以及解决方案如下：
+|局限|解决|
+|:--|:--||传输效率|Accept-encoding||无状态，无用户维度识别|Cookie||单向，缺少及时性|LongPooling||无分块，无法串流|Http Live Streaming||无多路复用|Http2||中间人窃取|Https|
+
