@@ -1,7 +1,7 @@
 > 我的博客正式开通啦，快来围观吧
 
 # demo
-[点这里](http://fishedeee.com)看一下这个基于jekyll的博客吧。
+[点这里](http://fishedee.com)看一下这个基于jekyll的博客吧。
 
 # 特点
 
