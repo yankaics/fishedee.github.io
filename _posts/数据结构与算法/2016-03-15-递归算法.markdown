@@ -1,0 +1,32 @@
+---
+layout: post
+category: 数据结构与算法
+---
+
+# 1.概述谈谈递归算法
+# 2.经典递归汉诺塔归并排序
+# 3.本质直接推导，通过直接找到答案来得出结果，F(n) = 1 + 1 + 1 + 2递归推导，通过寻求F(n)与F(n-1)的关系，来得出结果F(n) = F(n-1) + xxxx
+# 4.递归单值
+## 4.1.斐波那契数列斐波那契数列指的是这样一个数列 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, …那么第N项是啥？
+## 4.2.跳步级问题在一个楼梯上，可以跳1步，也可以跳2步，那么走到第N层需要多少步？
+# 5.递归数组
+## 5.1.数列全排序对于一个长度为n的串，它的全排列共有A(n, n)=n!种。这个问题也是一个递归的问题， 不过我们可以用不同的思路去理解它。为了方便讲解，假设我们要考察的串是”abc”， 递归函数名叫permu。那么，随便一个数列，怎么打印出全排列出来。
+## 5.2.走迷宫![](/assets/img/14580444528276.jpg)
+怎么让计算机走迷宫
+## 5.3.最长不降子序列有由n个不相同的整数组成的数列，记为:a1、a2、……、an，例如3，18，7，14，10，12，23，41，16，24。若存在i1<i2<i3< … < ie 且有a(i1)<＝a(i2)<＝ … <＝a(ie)则称为长度为e的不下降序列。如上例中3，18，23，24就是一个长度为4的不下降序列，同时也有3，7，10，12，16，24长度为6的不下降序列。
+
+```
+<html>	<head>	</head>	<body>		<script>			var array = [3,18,7,14,10,12,23,41,16,24];			var exist = {};			function go(n){				if( exist[n] )					return exist[n];				var result = 1;				for( var i = n - 1 ; i >= 0 ; --i ){					var singleResult;					if( array[i] <= array[n] )						singleResult = 1 + go( i );					else						singleResult = 1;					if( singleResult > result )						result = singleResult;				}				exist[n] = result;				return result;			}			var result = null;			for( var i = 0 ; i < array.length ; ++i ){				var singleResult = go(i);				if( result == null ||					singleResult > result )					result = singleResult;			}			alert(result);			console.log(exist);		</script>	</body></html>
+```# 6.递归对象
+## 6.1.xml转换成json如何xml格式转换为json
+## 6.2.二叉树的高度![](/assets/img/14580444606428.jpg)
+怎么算二叉树的高度
+# 7.综合一幢 200 层的大楼,给你两个鸡蛋. 如果在第 n 层扔下鸡蛋,鸡蛋不碎,那么从前 n-1 层扔鸡蛋都不碎.这两只鸡蛋一模一样,不碎的话可以扔无数次. 已知鸡蛋在0层扔不会碎.提出一个策略, 要保证能测出鸡蛋恰好会碎的楼层, 并使此策略在最坏情况下所扔次数最少.![](/assets/img/14580444843696.jpg)
+
+```
+<html>	<head>	</head>	<body>		<script>			var exist = {};			function go(n){				if( n <= 2 )					return n;				if( exist[n] )					return exist[n];				var result = null;				for( var i = 1 ; i <= n ; ++i ){					var singeResult = 1 + Math.max(						i - 1,						go( n - i )					); 					if( result == null || 						singeResult < result )						result = singeResult;				}				exist[n] = result;								return result;			}			alert(go(200));		</script>	</body></html>
+```
+
+# 8.井字过三关
+分段博弈
+

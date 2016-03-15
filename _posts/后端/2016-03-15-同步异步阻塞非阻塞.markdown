@@ -1,0 +1,22 @@
+---
+layout: post
+category: 后端
+---
+
+# 1.概述单发，并发，同步，异步，阻塞，非阻塞
+# 2.问题你的左手边有N个茶壶，你的任务是将这N个茶壶里的水加热到100度，并且将他们到扔到右边。问，如何优雅地解决这个问题？
+# 3.思路阻塞：煮完一壶等下一壶非阻塞：同时煮几壶，隔一段时间掀开茶壶看哪个熟了，就扔那个。单发：你一个人搞并发：你叫上小伙伴们一起搞同步：看着茶壶来确定那个熟了异步：将茶壶切换成响气壶，让茶壶告诉你那个熟了很明显，高效而且高雅的办法就是并发+非阻塞+异步
+# 4.问题2你是一个CPU，你的任务是处理N个请求，这几个请求都是，到磁盘找出A文件，然后发给他。问：如何优雅地派发文件到网络上的请求。
+# 5.思路2
+# 5.1.apache![Picture1](/assets/img/Picture1.png)
+![Picture1](/assets/img/Picture1.png)apache架构图，并发+阻塞
+# 5.2.nginx![Picture2](/assets/img/Picture2.png)
+![Picture2](/assets/img/Picture2.png)nginx架构图，并发+非阻塞
+# 5.3.nodejs
+
+```var http = require('http');var rf=require("fs");  http.createServer(function (req, res) {	rf.readFile("mm.php",'utf-8',function(err,data){  	    if(err){  	        console.log("error");  	    }	    res.writeHead(200, {'Content-Type': 'text/plain'});	    res.end(data);	});}).listen(1337, '127.0.0.1');console.log('Server running at http://127.0.0.1:1337/');
+```
+nodejs架构图，单发+异步
+# 6.问题3那么，我们现在的架构是什么？怎么优化，怎么提高？
+# 7.更多异步造成的回调地狱怎么避免（维护复杂性）？非阻塞怎么避免（代码可读性）？
+
