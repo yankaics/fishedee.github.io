@@ -4,8 +4,11 @@
     <meta http-equiv="content-type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
     <!--[if lte IE 9]><meta http-equiv="refresh" content="0;url=/ie.html"><![endif]-->
-
+    {% if page.title %}
     <title>{{ page.title }}</title>
+    {% else %}
+    <title>{{ site.title }}</title>
+    {% endif %}
     <meta name="description" content="">
 
     <link rel="stylesheet" type="text/css" href="/assets/css/style.css">
@@ -32,7 +35,7 @@
 
       <div id="posts-list">
         <form action="" id="search-form">
-          <a href="/index.html" id="mobile-avatar"></a>
+          <a href="/index.html" id="mobile-avatar" style="background:url({{site.avatar}});background-size:50px 50px;"></a>
           <!-- NOTE: input field is disabled by default -->
           <input id="search-input" type="text" placeholder="Search..." disabled >
         </form>
