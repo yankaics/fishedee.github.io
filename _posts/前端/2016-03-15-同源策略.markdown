@@ -8,36 +8,53 @@ category: 前端
 # 3.为什么浏览器是特殊的客户端应用，它其实是多个应用的容器。qq.com是一个应用，weibo.com是一个应用，他们的数据都放在同一个应用下面。如果多个应用间没有防火墙，qq.com可以访问到weibo.com的秘密文件，例如cookie，那么就会发生严重的安全性问题。qq.com可以获取到taobao.com的cookie，然后将这个cookie发给后台，我们就能看到登陆qq.com的所有人的淘宝信息（包括余额，订单，购物车）so，作为一个容器，浏览器需要对多个应用进行区分，然后在应用之间设立防火墙，避免他们的资源可以互相访问。而多个应用间的定义很直观的就使用了域名来划分了。
 # 4.什么是同源同域要求两个站点同协议、同域名、同端口，比如：表 1-1 展示了表中所列站点与http://www.foo.com是否同域的情况。
 |站    点|是否同域|原    因|
-| :-- | :-- | :-- ||https://www.foo.com|不同域|协议不同，https与http是不同的协议||http://xeyeteam.foo.com|不同域|域名不同，xeyeteam子域与www子域不同||http://foo.com|不同域|域名不同，顶级域与www子域不是一个概念||http://www.foo.com:8080|不同域|端口不同，8080与默认的80端口不同||http://www.foo.com/a/|同域|满足同协议、同域名、同端口，只是这里多了一个目录而已|同源的标识是，协议相同，域名相同，端口也相同，才能称为同源。# 5.什么是策略## 5.1.document策略每个frame代表一个document，包括iframe和顶级frame多个document必须同源，才能互相操控对方的frame
+| :-- | :-- | :-- ||https://www.foo.com|不同域|协议不同，https与http是不同的协议||http://xeyeteam.foo.com|不同域|域名不同，xeyeteam子域与www子域不同||http://foo.com|不同域|域名不同，顶级域与www子域不是一个概念||http://www.foo.com:8080|不同域|端口不同，8080与默认的80端口不同||http://www.foo.com/a/|同域|满足同协议、同域名、同端口，只是这里多了一个目录而已|同源的标识是，协议相同，域名相同，端口也相同，才能称为同源。
+# 5.什么是策略
+## 5.1.document策略每个frame代表一个document，包括iframe和顶级frame多个document必须同源，才能互相操控对方的frame
 ## 5.2.xmlhttprequest策略script来源于a域名，那么该script只能对a域名发送ajax请求。
 ## 5.3.webstorage策略同源共享同一个webstorage，不同源不共享webstorage
 ## 5.4.cookie策略只有cookie的域与访问资源的域匹配时，才能访问到cookie## 5.5.注意注意，同源策略没有限制请求资源的直接跨域
-1.	a域名下的html加入b域名的js,css,img等外部资源2.	a域名下的html加入b域名的script，然后b域名操控a域名下的dom3.	a域名下的html加入b域名的script，然后加入a域名的script2,script2使用了script的代码## 6.跨域的方式## 6.1.概述同源策略，提高了安全性，但也给大规模的web应用带来烦恼。
+1.	a域名下的html加入b域名的js,css,img等外部资源2.	a域名下的html加入b域名的script，然后b域名操控a域名下的dom3.	a域名下的html加入b域名的script，然后加入a域名的script2,script2使用了script的代码
+## 6.跨域的方式
+## 6.1.概述同源策略，提高了安全性，但也给大规模的web应用带来烦恼。
 ## 6.2.document跨域设置document.domain来实现document跨子域例如a.qq.com嵌套一个b.qq.com的iframe如果a.qq.com设置document.domain为qq.comb.qq.com设置document.domain为qq.com那么他俩就能互相通信了，不受跨域限制了。注意：只能跨子域
 ## 6.3.cookie跨域通过设置Set-Cookie的domain属性来跨域例如，user.qq.com请求a.qq.com/user/islogin来返回Cookie信息，并且cookie的domain设置为qq.com，那么a.qq.com,b.qq.com下都能访问到这个cookie，从而实现单点登陆所有下属网站的能力了。注意：可以跨任意域名
-## 6.4.xmlhttprequest跨域### 6.4.1.jsonp的get跨域
+## 6.4.xmlhttprequest跨域
+### 6.4.1.jsonp的get跨域
+
 ![](/assets/img/14580364519042.jpg)
 利用浏览器的资源不受同源策略的影响的特性，实现跨域的get请求a.qq.com的script想访问b.qq.com/user/login/接口，传统办法是用ajax请求而改为插入script标签，<script src=”b.qq.com/user/login”></script>script标签将结果数据写入到json字段，吐出为jsonp_xxxx({a:3,b:4});来回调a.qq.com的script，从而实现跨域的get请求注意：可以跨任意域名，但只能是get请求，而且需要后台配合。
-### 6.4.2.iframe+302的post跨域![](/assets/img/14580364594677.jpg)
+### 6.4.2.iframe+302的post跨域
+![](/assets/img/14580364594677.jpg)
 a.qq.com用隐形的form来post数据，form的action设置为b.qq.com，然后后台执行完数据后，执行302跳转，从而将数据递回给a.qq.com。注意：可以跨任意域名，可以是get或post请求，而且需要后台配合。
 ### 6.4.3.iframe+name的post跨域name 在浏览器环境中是window对象的一个属性，且当在frame中加载新页面(也可以是跨域页面)时，name 的属性值依旧保持不变，并且name可以保存2M的数据量。将后端返回的数据写入window.name,然后将iframe的location刷新为源域的一个空白页面，这样iframe就跟我们页面同域了，因为window.name在iframe中加载新页面数据不会丢失，所以就可以通过iframe.contentWindow.name获取到POST接口返回的数据。a.qq.com用隐形的form来post数据，form的action设置为b.qq.com，target设置为一个隐形的iframe。然后后台执行完数据后，执行window.name = xxx。然后iframe的url设置为本域下的一个url，从而获取到name返回。注意：可以跨任意域名，可以是get或post请求，而且需要后台配合。
 ## 6.5.webstorage跨域配合ajax即可实现跨域
-# 7.CSRF## 7.1.概述csrf是利用浏览器的同源策略，也是利用跨域的各种方法来攻击网站。
+# 7.CSRF
+## 7.1.概述csrf是利用浏览器的同源策略，也是利用跨域的各种方法来攻击网站。
+
 ![](/assets/img/14580364675187.jpg)## 7.2.示例1银行网站A，它以GET请求来完成银行转账的操作，如：http://www.mybank.com/Transfer.php?toBankId=11&money=1000危险网站B，它里面有一段HTML的代码如下：<img src=http://www.mybank.com/Transfer.php?toBankId=11&money=1000>首先，你登录了银行网站A，然后访问危险网站B，噢，这时你会发现你的银行账户少了1000块......利用了jsonp的跨域漏洞
 ## 7.3.示例2银行网站A，它现在改为以POST请求来完成银行转账的操作，然后危险网站B也改了，它的代码如下：
-```html<html>　　<head>　　　　<script type="text/javascript">　　　　　　function steal()　　　　　　{          　　　　 iframe = document.frames["steal"];　　     　　      iframe.document.Submit("transfer");　　　　　　}　　　　</script>　　</head>　　<body onload="steal()">　　　　<iframe name="steal" display="none">　　　　　　<form method="POST" name="transfer"　action="http://www.myBank.com/Transfer.php">　　　　　　　　<input type="hidden" name="toBankId" value="11">　　　　　　　　<input type="hidden" name="money" value="1000">　　　　　　</form>　　　　</iframe>　　</body></html>
-```利用iframe的跨域漏洞
+
+```<html>　　<head>　　　　<script type="text/javascript">　　　　　　function steal()　　　　　　{          　　　　 iframe = document.frames["steal"];　　     　　      iframe.document.Submit("transfer");　　　　　　}　　　　</script>　　</head>　　<body onload="steal()">　　　　<iframe name="steal" display="none">　　　　　　<form method="POST" name="transfer"　action="http://www.myBank.com/Transfer.php">　　　　　　　　<input type="hidden" name="toBankId" value="11">　　　　　　　　<input type="hidden" name="money" value="1000">　　　　　　</form>　　　　</iframe>　　</body></html>
+```
+利用iframe的跨域漏洞
 ## 7.4.防范### 7.4.1.origin字段检查ajax的origin字段
 ### 7.4.2.csrf令牌
-```php<?php　　　//构造加密的Cookie信息　　　$value = “DefenseSCRF”;　　　setcookie(”cookie”, $value, time()+3600);　?>
-```后端随机生成cookie
+
+```<?php　　　//构造加密的Cookie信息　　　$value = “DefenseSCRF”;　　　setcookie(”cookie”, $value, time()+3600);　?>
+```
+后端随机生成cookie
+
 ```php<?php　　　　$hash = md5($_COOKIE['cookie']);　　?>　　<form method=”POST” action=”transfer.php”>　　　　<input type=”text” name=”toBankId”>　　　　<input type=”text” name=”money”>　　　　<input type=”hidden” name=”hash” value=”<?=$hash;?>”>　　　　<input type=”submit” name=”submit” value=”Submit”>　　</form>
 ```所有的form表单加上cookie的md5编码。后台收到请求，校验token与cookie的对应值加入ajax的csrf token
 ## 7.5.例子
+
 ![](/assets/img/14580365338455.jpg)
 传说中的上了莫名其妙的网站后，自己的微博发了很多莫名其妙的微博＝，＝
-# 8.CORS## 8.1.概述更安全的跨域控制方式，除了IE8以及IE8以下的浏览器不支持，其他的浏览器都支持，兼容性棒棒的！
+# 8.CORS
+## 8.1.概述更安全的跨域控制方式，除了IE8以及IE8以下的浏览器不支持，其他的浏览器都支持，兼容性棒棒的！
 ## 8.2.Access-Control-Allow-Origin
+
 ![](/assets/img/14580365409834.jpg)
 服务器控制允许的跨域来源域名
 ## 8.3.Access-Control-Allow-Credentials服务器控制跨域的cookie能否发送，要注意的是，服务器开启Access-Control-Allow-Credentials后，Access-Control-Allow-Origin就不能带*号了，必须要带具体的域名地址。
