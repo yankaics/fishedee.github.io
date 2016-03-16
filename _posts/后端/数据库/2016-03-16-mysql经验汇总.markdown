@@ -1,3 +1,8 @@
+---
+layout: post
+category: 后端
+---
+
 # 1 概述
 mysql经验汇总，都是在[烘焙帮](http://a.app.qq.com/o/simple.jsp?pkgname=com.hongbeibang.app)在自坑了一次又一次的经验呀
 
