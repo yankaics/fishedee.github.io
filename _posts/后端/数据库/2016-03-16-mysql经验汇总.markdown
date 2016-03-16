@@ -1,0 +1,220 @@
+# 1 概述
+mysql经验汇总，都是在[烘焙帮](http://a.app.qq.com/o/simple.jsp?pkgname=com.hongbeibang.app)在自坑了一次又一次的经验呀
+
+# 2 存储结构
+
+## 2.1 引擎
+mysql的默认引擎是MyISAM，所以建表时请务必明确要求使用innodb引擎，支持行锁，强事务性。别问我为什么，用了MyISAM引擎丢过数据，查询锁过表导致超时默默不语
+
+## 2.2 字符集
+mysql的默认字符集是utf-8，但是是坑爹的最长三字节的utf-8，导致emoji字符存不下，用户输入的表情数据全表丢失。所以建表时请务必明确要求使用utf8mb4字符集，完美解决。
+
+## 2.3 主键自增
+为了我好你好大家好，inndb引擎上最好带有一个自增的主键ID，自增ID一般从是10001开始，从1开始也可以，不过比较难看就是了。带有自增主键的好处是，数据按创建时间排序时，可以改为用自增ID倒序排列，这样速度会快很多。另外，自增主键唯一方便修改数据，业务也比较好做。
+
+## 2.4 not null
+最好指定字段都是not null的。当然，mysql的指定not null后，当你插入null数据时，mysql会将其转换为空数据，
+
+## 2.5 时间
+表中都带有创建时间和修改时间两个字段，方便出问题时排错用。创建时间设置为default CURRENT_TIMESTAMP，修改时间设置为default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP。
+
+另外，要密切注意的是，mysql的时间如果设置为
+
+```
+publishTime timestamp not null
+```
+
+默认就是与以下代码一样
+
+```
+publishTime timestamp not null on update CURRENT_TIMESTAMP
+```
+
+没错，mysql默认时间字段在修改数据时自动会更新为当前时间。++，这是多么隐藏的坑。你需要显式将时间字段设置为以下的方式，才能让时间字段设置为想要的方式。
+
+```
+publishTime timestamp not null default 0
+```
+
+## 2.6 总结
+
+```
+create table t_appmsg_broadcast(
+	appmsgBroadcastId integer not null auto_increment,
+	message varchar(256) not null,
+	deviceType integer not null,
+	afterOpenType integer not null,
+	afterOpenData varchar(256) not null,
+	state integer not null,
+	createTime timestamp not null default CURRENT_TIMESTAMP,
+	modifyTime timestamp not null default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
+	primary key( appmsgBroadcastId )
+)engine=innodb default charset=utf8mb4 auto_increment = 10001;
+```
+
+以上是一个常用的sql模板
+
+# 3 查询优化
+
+## 3.1 数据筛选优化
+mysql中的innodb引擎只支持B-Tree索引，不支持Hash索引。在经常需要查询的字段上建立索引即可，这个没有什么好说的。
+
+## 3.2 数据聚合优化
+
+```
+select max(score) from t_user where class = xxx
+select count(*) from t_user where class = xxx
+```
+
+如果经常查询的数据是聚合操作，例如是以上的两种max,count。在mysql上是没有对应的索引的，它的做法是将数据全部筛选一遍，然后数数字来获取count，逐个遍历来获取max。啥都别说，慢得要死。解决办法是，建立一个临时表，每次更新数据时，都将对应的max，count数值算好放到临时表上。下次取max,count数值时直接到临时表上取即可。
+
+## 3.3 唯一插入优化
+
+
+```
+数据行数 ＝ 查询数据库
+if 数据行数为空 {
+	插入数据到数据库
+}else{
+	更新数据到数据库
+}
+```
+
+我们经常会遇到以上的这种业务，这样做小量跑是没有问题的，大数据跑起来后会导致多个重复数据的出现。因为查询与更新的操作是两个操作，不在同一个事务上。你不能确保插入数据时，之前查询到的数据可能已经是过期的了。
+
+### 3.3.1 加事务
+
+```
+开启数据库事务
+数据行数 ＝ 查询数据库 for update
+if 数据行数为空 {
+	插入数据到数据库
+}else{
+	更新数据到数据库
+}
+提交数据库事务
+```
+
+简单的办法是直接前后加事务，问题是这样会直接导致表锁，因为查询操作大多是一个范围操作，这样会导致innodb的表锁，查询性能急剧下降。
+
+#### 3.3.2 唯一索引
+
+```
+insert ignore t_user values(clientId,xxx) values(xxx)
+insert into t_user values(clientId,xxx) values(xxx) on duplicate update(xxxx)
+replace into t_user values(clientId,xxx)
+```
+
+在查询字段上建立唯一索引，然后用insert ignore或insert into来做插入操作，将查询，插入操作合并成一条语句，然后交给mysql做单条语句的事务操作。大幅提高插入的执行效率，同时保证了事务性，数据不会有重复。问题是，这样做的话自增主键会留下很多空洞。造成上一次插入的clientId是10001，这次就变成了19999。中间的自增ID数据凭空消失了。
+
+这是一个mysql的[bug](https://bugs.mysql.com/bug.php?id=28781)，官网说除了将auto_incr设置为锁表操作外，没有其他办法。但是一旦将auto_incr设置为锁表，就会掉入到上一节所说的解决方案的性能上，非常悲催。
+
+#### 3.3.3 唯一索引+query
+
+```
+数据行数 ＝ 查询数据库
+if 数据行数为空 {
+	插入数据到数据库( insert into on duplicate update )
+}else{
+	更新数据到数据库
+}
+```
+
+我们暂时能想到的办法是这样的，插入前先查询数据，不为空走原逻辑，为空的话，走insert on duplicate key update的逻辑。这样绝大部分冲突的行为都走下面的更新操作，不走insert操作，不会触发insert into xx on duplicate update的自增凭空操作。万一真的冲突了，我们还会有insert into on duplicate update保底，不会导致数据重复。由于冲突情况总是少见的，所以造成的gap也不会多。这不算是一个完美的方案，仍然会导致auto_incr的gap。但是，在保证性能的情况下，auto_incr的gap的数量会少很多很多。**如果你有更好的办法，也请留言给我噢**
+
+## 3.4 分页优化
+
+![Screen Shot 2016-03-16 at 6.07.15 P](/assets/img/Screen%20Shot%202016-03-16%20at%206.07.15%20PM.png)
+
+数据量大时，业务要求肯定需要分页。有几个方案，可以试试。假设我们面对的是一个千万级的用户表。
+
+### 3.4.1 limit,offset+count(*)
+
+![Screen Shot 2016-03-16 at 6.16.16 P](/assets/img/Screen%20Shot%202016-03-16%20at%206.16.16%20PM.png)
+
+使用limit,offset来获取数据分页下的具体数据，用count操作来确定是否有剩余数据。杯具的问题是，mysql没有对limit,offset进行优化的办法，他只能获取到所有数据，然后偏移到offset的位置，然后取limit长度。每次都是全表扫描，百万数据量时这样做就开始卡爆了。
+
+* 优点：支持跳页操作
+* 缺点：非常慢，顶部新增数据，会导致页面间数据重复。
+* 场景：业务后台管理系统
+
+#### 3.4.2 子查询获取offset的id，然后用id做查询
+
+![Screen Shot 2016-03-16 at 6.12.26 P](/assets/img/Screen%20Shot%202016-03-16%20at%206.12.26%20PM.png)
+
+使用子查询找到offset对应的userId，然后外部查询根据userId的值做where条件，取limit
+
+* 优点：稍快
+* 缺点：仍然没有走索引，还是在同一个数量级上
+* 场景：无
+
+### 3.4.3 id做offset
+
+![Screen Shot 2016-03-16 at 6.07.21 P](/assets/img/Screen%20Shot%202016-03-16%20at%206.07.21%20PM-1.png)
+
+直接用userId来代替offset，limit保持不变来获取分页下的具体数据。由于这样写的话全部走索引，所以速度快到爆。userId来自于上一个分页尾部userId，也就是这种方法不能跳页，只能顺序往下慢慢翻页。
+
+* 优点：非常快，页面间数据不重复。
+* 缺点：不支持跳页操作
+* 场景：业务前端系统
+
+### 3.4.4 分页数据重复
+至此，如何优化mysql的分页优化已经很明显了，根据场景使用即可。在这要提示的一个坑是，mysql的分页查询中均需要带上order by，而order by的列必须是唯一的，不然会重现，换页间数据重复的问题。
+
+例如，数据集为:
+
+```
+[userId,createTime]
+[1,'2015-11-01'],
+[2,'2015-11-03'],
+[3,'2015-11-03'],
+[4,'2015-11-08'],
+```
+
+如果order by createTime asc limit 0,2，这个数值为：
+
+```
+[userId,createTime]
+[1,'2015-11-01'],
+[2,'2015-11-03'],
+```
+
+但是，当你多运行多两次时，结果有可能为：
+
+```
+[userId,createTime]
+[1,'2015-11-01'],
+[3,'2015-11-03'],
+```
+
+两次结果不一样的，毕竟你指定mysql，仅仅对createTime进行排序，对于重复的createTime，数据间如何排序则由mysql来指定。所以，当你运行两次分页时，有可能就出现以下情况。
+
+```
+offset 2,0
+[userId,createTime]
+[1,'2015-11-01'],
+[3,'2015-11-03'],
+
+offset 2,2
+[userId,createTime]
+[3,'2015-11-03'],
+[4,'2015-11-08'],
+```
+
+解决办法是，在order by后加入其他列，让排序的结果是唯一的，例如是order by createTime asc,clientId asc。解决了无论如何分页，数据都不会重叠的问题。
+
+```
+offset 2,0
+[userId,createTime]
+[1,'2015-11-01'],
+[2,'2015-11-03'],
+
+offset 2,2
+[userId,createTime]
+[3,'2015-11-03'],
+[4,'2015-11-08'],
+```
+
+# 4 总结
+mysql的坑还有很多，就先写到这了。
+
