@@ -1,0 +1,287 @@
+---
+layout: post
+category: 前端
+---
+
+# 1 概述
+```
+lxn/walk windows 源码笔记
+lxn/wak是使用windows api封装起来用go语言表达的一整套ui框架
+源码位置如下
+https://github.com/lxn/walk/
+代码简单，好借鉴。
+ui包装的方式是基础的handle组合，而不是directui方式
+```
+
+# 2 event基础
+
+## 2.1 事件event
+
+```
+描述一个事件
+event => 事件的侦听者们
+  Attach
+  Detach
+EventPublisher => 事件的发布者们
+  Publish
+```
+
+## 2.2 校验器validator
+
+```
+描述一个数据的校验方式
+Validate(v interface{}) error
+自带有rangvalidate,regexvalidate和selectvalidate
+```
+
+## 2.3 属性property
+
+```
+描述一个属性
+Get,Set,ReadOnly
+Changed()获取事件倾听者们
+Source,SetSource，属性源，可以为另外一个属性，从而实现属性绑定
+Validator,SetValidator，设置校验器
+```
+
+# 3 gdi基础
+
+## 3.1 字体(font)
+
+```
+func NewFont(family string, pointSize int, style FontStyle) (*Font, error) 
+通过传入famiy,pointSize,style来建立一个font，注意new过的font是会被缓存起来的
+
+func (f *Font) handleForDPI(dpi int) win.HFONT {
+通过传入dpi来获取相应的hfont
+
+```
+
+## 3.2 颜色(color)
+
+```
+type Color uint32
+
+func RGB(r, g, b byte) Color {
+	return Color(uint32(r) | uint32(g)<<8 | uint32(b)<<16)
+}
+颜色是个简单的整数
+```
+
+## 3.3 位图(bitmap)
+
+```
+type Bitmap struct {
+	hBmp       win.HBITMAP
+	hPackedDIB win.HGLOBAL
+	size       Size
+}
+hBmp是设备有关的位图数据（显示器）
+hPackedDIB是设备无关的位图数据
+
+func NewBitmap(size Size) (bmp *Bitmap, err error) {
+创建空位图
+func NewBitmapFromFile(filePath string) (*Bitmap, error) {
+从文件中创建位图
+func NewBitmapFromImage(im image.Image) (*Bitmap, error) {
+从go图片中创建位图
+```
+
+## 3.4 图标(icon)
+
+```
+type Icon struct {
+	hIcon   win.HICON
+	isStock bool
+}
+hIcon是图标对象
+func IconApplication() *Icon
+获取预定义图标
+func NewIconFromFile(filePath string) (*Icon, error) 
+func NewIconFromImage(im image.Image) (ic *Icon, err error) 
+从文件或图片中创建图标
+```
+
+## 3.5 画笔(pen)
+
+```
+type Pen interface {
+	handle() win.HPEN
+	Dispose()
+	Style() PenStyle
+	Width() int
+}
+handle()返回的是pen对象
+
+func NullPen() Pen
+func NewCosmeticPen(style PenStyle, color Color) (*CosmeticPen, error) 
+func NewGeometricPen(style PenStyle, width int, brush Brush) (*GeometricPen, error)
+创建空画笔，样式画笔，带宽度的样式画笔
+```
+
+## 3.6 画刷(brush)
+
+```
+type Brush interface {
+	Dispose()
+	handle() win.HBRUSH
+	logbrush() *win.LOGBRUSH
+}
+handle()返回的是brush对象
+
+func NullBrush() Brush
+func NewSystemColorBrush(colorIndex int) (*SystemColorBrush, error) 
+func NewSolidColorBrush(color Color) (*SolidColorBrush, error) 
+func NewHatchBrush(color Color, style HatchStyle) (*HatchBrush, error) 
+创建空画刷，系统颜色画刷，实体颜色画刷，样式画刷
+```
+
+# 4 ui基础
+
+## 4.1 光标(cursor)
+
+```
+type Cursor interface {
+	Dispose()
+	handle() win.HCURSOR
+}
+光标的定义，相当简单
+可以通过stockCursor来获取系统光标
+也可以通过CustomCursor来自定义光标
+```
+
+## 4.2 菜单(menu)
+
+```
+type Menu struct {
+	hMenu   win.HMENU
+	hWnd    win.HWND
+	actions *ActionList
+}
+func NewMenu() (*Menu, error) 
+创建一个空菜单
+通过增删actions来更改hMenu里面的样式
+```
+
+## 4.3 位置(point)
+
+```
+type Point struct {
+	X, Y int
+}
+```
+
+## 4.4 矩形(rectangle)
+
+```
+type Rectangle struct {
+	X, Y, Width, Height int
+}
+func (r Rectangle) toRECT() win.RECT 
+转化为rect对象
+```
+
+# 5. 窗体基础
+
+## 5.1 Window（窗体）
+
+```
+描述一个窗体，包括窗体下的button，layout等等
+// WindowBase implements many operations common to all Windows.
+type WindowBase struct {
+	window                  Window
+	hWnd                    win.HWND
+	origWndProcPtr          uintptr
+	name                    string
+	font                    *Font
+	contextMenu             *Menu
+	disposables             []Disposable
+	disposingPublisher      EventPublisher
+	dropFilesPublisher      DropFilesEventPublisher
+	keyDownPublisher        KeyEventPublisher
+	keyPressPublisher       KeyEventPublisher
+	keyUpPublisher          KeyEventPublisher
+	mouseDownPublisher      MouseEventPublisher
+	mouseUpPublisher        MouseEventPublisher
+	mouseMovePublisher      MouseEventPublisher
+	mouseWheelPublisher     MouseEventPublisher
+	sizeChangedPublisher    EventPublisher
+	maxSize                 Size
+	minSize                 Size
+	background              Brush
+	cursor                  Cursor
+	suspended               bool
+	visible                 bool
+	enabled                 bool
+	name2Property           map[string]Property
+	enabledProperty         Property
+	enabledChangedPublisher EventPublisher
+	visibleProperty         Property
+	visibleChangedPublisher EventPublisher
+	focusedProperty         Property
+	focusedChangedPublisher EventPublisher
+}
+func InitWindow(window, parent Window, className string, style, exStyle uint32) error 
+初始化一个窗体
+```
+
+## 5.2 控件(widget)
+
+```
+type WidgetBase struct {
+	WindowBase
+	parent                      Container
+	toolTipTextProperty         Property
+	toolTipTextChangedPublisher EventPublisher
+	alwaysConsumeSpace          bool
+}
+func InitWidget(widget Widget, parent Window, className string, style, exStyle uint32) error 
+初始化一个widget，widget相比windows，增加的是布局的概念，包括widget的parent，以及widget的布局参数
+func LayoutFlags() LayoutFlags
+func SizeHint() Size
+func MinSizeHint() Size
+widget包括的是button,label,lineedit,textedit,imageview,tableview,listbox,treeview
+```
+
+## 5.3 容器(container)
+
+```
+type ContainerBase struct {
+	WidgetBase
+	layout     Layout
+	children   *WidgetList
+	dataBinder *DataBinder
+	persistent bool
+}
+Children() *WidgetList
+Layout() Layout
+container相比widget，增加的是子控件的概念，可以设置子控件的数量，以及子控件的布局方式
+container包括的是composite
+```
+
+## 5.4 顶级窗体(form)
+
+```
+type FormBase struct {
+	WindowBase
+	clientComposite       *Composite
+	owner                 Form
+	closingPublisher      CloseEventPublisher
+	startingPublisher     EventPublisher
+	titleChangedPublisher EventPublisher
+	progressIndicator     *ProgressIndicator
+	icon                  *Icon
+	prevFocusHWnd         win.HWND
+	isInRestoreState      bool
+	closeReason           CloseReason
+}
+type Form interface {
+	Container
+	AsFormBase() *FormBase
+	Run() int
+}
+form相比container，增加的是顶级的概念，包括顶级窗体的上一个是谁，顶级窗体的关闭触发是啥，以及启动的概念
+form包括的是dialog和mainwindow
+```
+
+
