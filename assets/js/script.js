@@ -138,12 +138,18 @@ function afterPjax() {
     if( !window.DISQUS ){
       return;
     }
+    if( !window.hljs ){
+      return;
+    }
     window.DISQUS.reset({
         reload: true,
         config: function () {
             this.page.identifier = $('#post__content').data('identifier');
             this.page.title = $('#post__content').data('title');
         }
+    });
+    $('pre code').each(function(i, block) {
+      hljs.highlightBlock(block);
     });
     clearInterval(ds_interval);
   }
