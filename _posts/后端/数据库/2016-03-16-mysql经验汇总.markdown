@@ -18,9 +18,12 @@ mysql的默认字符集是utf-8，但是是坑爹的最长三字节的utf-8，�
 为了我好你好大家好，inndb引擎上最好带有一个自增的主键ID，自增ID一般从是10001开始，从1开始也可以，不过比较难看就是了。带有自增主键的好处是，数据按创建时间排序时，可以改为用自增ID倒序排列，这样速度会快很多。另外，自增主键唯一方便修改数据，业务也比较好做。
 
 ## 2.4 not null
-最好指定字段都是not null的。当然，mysql的指定not null后，当你插入null数据时，mysql会将其转换为空数据，
+最好指定字段都是not null的。当然，mysql的指定not null后，当你插入null数据时，mysql会将其转换为空数据。**另外，特别注意的是，不要将空值数据设置为有效数据**，有效数据都必须是非空值数据，例如字段用integer做enum的话，就不能用0作为enum的其中一个值。因为这样会容易忽略了程序写入0的错误。
 
-## 2.5 时间
+## 2.5 not enum
+mysql中的enum体不利于迁移数据库，而且扩展时也会不方便，造成业务增加enum值时，数据库也需要同步更新。所以enum的最好还是使用integer类型来代替。
+
+## 2.6 时间
 表中都带有创建时间和修改时间两个字段，方便出问题时排错用。创建时间设置为default CURRENT_TIMESTAMP，修改时间设置为default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP。
 
 另外，要密切注意的是，mysql的时间如果设置为
@@ -41,7 +44,7 @@ publishTime timestamp not null on update CURRENT_TIMESTAMP
 publishTime timestamp not null default 0
 ```
 
-## 2.6 总结
+## 2.7 总结
 
 ```
 create table t_appmsg_broadcast(
