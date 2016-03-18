@@ -5,13 +5,13 @@ category: 前端
 
 > 尝鲜了一下用jekyll写博客，的确很方便呢。而且github原生支持jekyll，可以直接将jekyll规范到文件扔到github，就能实现一个博客了。
 
-# 什么原理
+# 1 什么原理
 jekyll的本质仍然是一个静态文件组成的博客。用户按照规范编写好jekyll的文件，然后执行一下jekyll serve，jekyll程序就会将其转化为一个纯静态页面的博客，然后就呈现出来。github page的原理也是一样，在用户上传代码后，执行一次jekyll，将用户输入的文件转化为静态网页，然后呈现出来。
 
-# 怎么工作
+# 2 怎么工作
 jekyll启动后，首先获取根目录上的_config.yml文件，获取网站的配置信息。然后遍历所有带有yaml头部的文件，然后根据yaml头部的信息来生成页面。
 
-## _config.yml
+## 2.1 _config.yml
 
 ``` python
 title: Your awesome title
@@ -31,7 +31,7 @@ markdown: kramdown
 
 这是一段默认的_config.xml的信息，描述了博客的拥有者信息，域名信息，还有就是markdown的引擎等等。
 
-## yaml头
+## 2.2 yaml头
 ``` python
 --- 
 layout: post
@@ -40,26 +40,87 @@ title: Blogging Like a Hacker
 ```
 这是一段典型的yaml头部信息，指定了该网页是layout文件夹中post布局来生成，title为”Blogging Like a Hacker“
 
-## 网页
+## 2.3 网页
 
 约定建立的html后缀为html格式的文件，markdown后缀的为markdown格式的文件。
 并且_posts文件中的网页文件为site.post文件。
 其他位置的网页文件为site.page文件。
 
-## 变量
+## 2.4 变量
 常见使用的变量放在[这里](http://jekyll.bootcss.com/docs/variables/)有详细介绍，我就不多说了。
 
-## 模板引擎
+## 2.5 模板引擎
 jekyll使用的模板引擎是Liquid，简单暴力。模板引擎的使用可以参看[基础用法](http://blog.csdn.net/dont27/article/details/38097581)[常见用法](https://segmentfault.com/a/1190000000406017)
 
-# 绑定到github
+# 3 常用功能
+
+## 3.1 目录
+
+![Screen Shot 2016-03-18 at 10.41.27 A](/assets/img/Screen%20Shot%202016-03-18%20at%2010.41.27%20AM.png)
+
+有的时候，我们想在每篇博客文章的前面加上目录。解决方案，有两个。
+
+* 在markdown写上[TOC]，让jekyll生成目录。不过这样做比较死，生成目录的地方总是文章开头，不能做到看文章看到一半时打开目录浮层。
+* 用js获取文章的h1....h5的标题，然后解析位置，生成目录。这样比较灵活，而且兼容性好，不过就是需要开发一下就是了。
+
+## 3.2 语法高亮
+
+![Screen Shot 2016-03-18 at 10.44.11 A](/assets/img/Screen%20Shot%202016-03-18%20at%2010.44.11%20AM.png)
+
+有时候，像我们这些写代码的人，总是会在文章里面加点代码，并让代码高亮起来。解决办法也是有两个。
+
+* 使用jekyll的Pygments或rouge的语法高亮工具，在生成静态文件时就将代码切割好了。然后自己配上对应的高亮样式就可以了。优点是打开网页效率快，缺点是支持语言少，而且不灵活，不能做到自动语法检测。
+* 使用js的语法高亮工具，推荐这个工具[highlight.js](https://github.com/isagalaev/highlight.js)，在浏览器对pre标签里面的数据进行语法高亮，优点是，成熟，支持的语法多得离谱，上百个。而且支持自动的语法检测。缺点是，在浏览器进行语法高亮，会影响网页的打开速度。
+
+也许你想问如何高亮的同时，增加显示代码行号。我的方法是在js层检测pre标签，然后解析pre标签的代码行数，生成一个行号的pre标签即可。
+
+## 3.3 评论
+
+![Screen Shot 2016-03-18 at 10.52.03 A](/assets/img/Screen%20Shot%202016-03-18%20at%2010.52.03%20AM.png)
+
+博客当然需要一点评论，这样看起来才活跃。不过jekyll是纯静态的博客工具，是无法维护动态的评论信息的。解决方法只能是用第三方的评论系统，然后在js层引入就可以了，这个还是比较简单的。
+
+* disqus，全球最大的第三方评论系统，优点是简洁漂亮，成熟，缺点是对国内用户不太友好，评论需要twitter，facebook或google账号，这简直要中国人命呀。
+* 多说，国内最大的第三方评论系统，优点是成熟，缺点是丑，非常丑，非常非常丑。
+* 畅言，国内最大访问量的第三方评论系统，优点是，比起多说就漂亮点，比起disqus还是丑。缺点是真的不稳定，在移动端引入PC端的评论代码时，竟然会崩溃，还不会自动适配。
+
+最后我选择了disqus，只因我是一个外貌协会，谢谢。而且，评论需要twitter，facebook或google账号，可以有效防止不会翻墙的二货乱评论。
+
+## 3.4 统计
+
+![027a45b5c9ea15ce90ec44b7b5003af33b87b2cb](/assets/img/027a45b5c9ea15ce90ec44b7b5003af33b87b2cb.jpg)
+
+运营博客的话，还需要时刻关注博客的运营情况。你可以在js层使用一些统计工具，有两个可以选。
+
+* Google统计，优点是成熟，统计维度多，缺点是国内数据全丢失，别问我为什么。
+* 百度统计，优点是除了国内能用，没有其他优点。
+
+## 3.5 总结
+
+![Screen Shot 2016-03-18 at 11.04.14 A](/assets/img/Screen%20Shot%202016-03-18%20at%2011.04.14%20AM.png)
+
+jekll作为一个静态博客，其实还是有很多功能是做不好的。我们更倾向于使用js来完善这些功能，毕竟随着jekll的不断升级，依赖jekll的实现很有可能在你下次提交博客到github时会收到warning。
+
+# 4 编写博客
+用markdown写博客最头疼的地方是，用什么存图片，用word是没有这个问题的，毕竟word里面一个文件里面是包含着图片信息的。jekyll的博客引用图片是用绝对路径的，所以你要么将图片上传到图床，要么放到博客的其中一个目录下。所以在博客中编辑图片的步骤为：
+
+1. 复制一张图片
+2. 拖动它到七牛上传区
+3. 获取上传到url
+4. 粘贴到markdown文件
+
+这是要搞死人的节奏呀，直到我遇到了[mweb](http://zh.mweb.im/mweb-1.4-add-floder-octpress-support.html)，支持直接复制图片就能插入到markdown文本中。简化后的步骤为：
+
+1. 复制一张图片
+2. 粘贴到markdown文件
+
+# 5 绑定到github
 例如，我要将顶级域名fishedee.com绑定到github.fishedee.io，方法是在github的目录下写上一个CNAME，内容为fishedee.com，然后将fishedee.com建立A的DNS，指向到github.fishdee.io的IP上即可。
 
-# 装逼之旅
+# 6 装逼之旅
 
 一般情况下，jekyll的配置大家都是差不多的，其实也就是换换主题，一般情况下都是在github上看别人的主题有什么好看的，直接fork。然后将自己的_posts的复制过去就完事了。[这里](http://jekyll.bootcss.com/docs/sites/)有很多推荐的主题，但愿大家看到好看的，fork以后就能装逼成功了～。
 
-
-# 总结
+# 7 总结
 让轮子滚起来，不要再自己写博客了。
 
