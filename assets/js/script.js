@@ -138,9 +138,7 @@ function afterPjax() {
     if( !window.DISQUS ){
       return;
     }
-    if( !window.hljs ){
-      return;
-    }
+    clearInterval(ds_interval);
     window.DISQUS.reset({
         reload: true,
         config: function () {
@@ -148,12 +146,64 @@ function afterPjax() {
             this.page.title = $('#post__content').data('title');
         }
     });
-    $('pre code').each(function(i, block) {
-      hljs.highlightBlock(block);
-    });
-    clearInterval(ds_interval);
   }
   ds_interval = setInterval(check,500);
+
+  var hightlight_interval = null;
+  function checkHightlight() {
+    if( !window.hljs ){
+      return;
+    }
+    clearInterval(hightlight_interval);
+    function getLinenumber(text){
+      var linenumber = 0;
+      var lastIndex = -1;
+      for( var i = 0 ; i < text.length ; i++ ){
+        var single = text.charAt(i);
+        if( single == '\n'){
+          ++linenumber;
+          lastIndex = i;
+        }
+      }
+      if( lastIndex != text.length -1 ){
+        ++linenumber;
+      }
+      return linenumber;
+    }
+    function generateLineDiv(linenumber){
+      var codeHtml = '<code style="float:left;" class="lineno">';
+      for( var i = 1 ; i <= linenumber ; ++i ){
+        codeHtml += i+"\n";
+      }
+      codeHtml += '</code>';
+      return $(codeHtml);
+    }
+    function initLineNumber(){
+      $('pre code').each(function(i, block) {
+        block = $(block);
+        if( block.hasClass("lineno") ){
+          return;
+        }
+        if( block.prev().hasClass("lineno")){
+          return;
+        }
+        var linenumber = getLinenumber(block.text());
+        var div = generateLineDiv(linenumber);
+        block.before(div);
+      });
+    }
+    function initHighLight(){
+      hljs.configure({
+        tabReplace: '    ', // 4 spaces
+      });
+      $('pre code').each(function(i, block) {
+        hljs.highlightBlock(block);
+      });
+    }
+    initLineNumber();
+    initHighLight();
+  }
+  hightlight_interval = setInterval(checkHightlight,500);
 }
 afterPjax();
 

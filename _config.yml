@@ -14,6 +14,9 @@ kramdown:
     - footnotes
     - smart
 
+#高亮配置
+highlight-theme : my-github
+
 #评论配置
 disqus: fishedee
 
