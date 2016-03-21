@@ -8,11 +8,11 @@ category: 后端
 # 3.思路阻塞：煮完一壶等下一壶非阻塞：同时煮几壶，隔一段时间掀开茶壶看哪个熟了，就扔那个。单发：你一个人搞并发：你叫上小伙伴们一起搞同步：看着茶壶来确定那个熟了异步：将茶壶切换成响气壶，让茶壶告诉你那个熟了很明显，高效而且高雅的办法就是并发+非阻塞+异步
 # 4.问题2你是一个CPU，你的任务是处理N个请求，这几个请求都是，到磁盘找出A文件，然后发给他。问：如何优雅地派发文件到网络上的请求。
 # 5.思路2
-# 5.1.apache![Picture1](/assets/img/Picture1.png)
+## 5.1.apache![Picture1](/assets/img/Picture1.png)
 ![Picture1](/assets/img/Picture1.png)apache架构图，并发+阻塞
-# 5.2.nginx![Picture2](/assets/img/Picture2.png)
+## 5.2.nginx![Picture2](/assets/img/Picture2.png)
 ![Picture2](/assets/img/Picture2.png)nginx架构图，并发+非阻塞
-# 5.3.nodejs
+## 5.3.nodejs
 
 ```var http = require('http');var rf=require("fs");  http.createServer(function (req, res) {	rf.readFile("mm.php",'utf-8',function(err,data){  	    if(err){  	        console.log("error");  	    }	    res.writeHead(200, {'Content-Type': 'text/plain'});	    res.end(data);	});}).listen(1337, '127.0.0.1');console.log('Server running at http://127.0.0.1:1337/');
 ```

@@ -69,10 +69,9 @@ kramdown:
     - autolink
     - footnotes
     - smart
-  enable_coderay: true
-  syntax_highlighter: rouge
-  coderay:
-    coderay_line_numbers:  nil
+
+#代码高亮主题配置
+highlight-theme : my-github
 
 #评论配置
 disqus: fishedee #这里填写disqus的账号，没有的删掉这行。
