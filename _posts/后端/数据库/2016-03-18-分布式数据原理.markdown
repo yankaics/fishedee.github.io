@@ -6,16 +6,188 @@ category: 后端
 # 1 概述
 分布式数据原理
 
-# 2 CAP与ACID
-CAP原理
+# 2 ACID,CAP与BASE
 
-## 2.1 C
+## 2.1 概述
+提到分布式数据，无人不会提及到大名鼎鼎的ACID原则，CAP原理，与BASE原则
 
-## 2.2 A
+## 2.2 ACID
+ACID,指数据库事务正确执行的四个基本要素的缩写。包含：原子性（Atomicity）、一致性（Consistency）、隔离性（Isolation）、持久性（Durability）。一个支持事务（Transaction）的数据库，必需要具有这四种特性，否则在事务过程（Transaction processing）当中无法保证数据的正确性，交易过程极可能达不到交易方的要求。
 
-## 2.3 P
+* 原子性（Atomicity），一个事务要么全部执行,要么不执行
+* 一致性（Consistency），事务的运行并不改变数据库中数据的一致性
+* 隔离性（Isolation），两个以上的事务不会出现交错执行的状态
+* 持久性（Durability)，事务执行成功以后,该事务所对数据库所作的更改便是持久的保存在数据库之中，不会无缘无故的回滚
 
-## 2.4 ACID与CAP的异同
+不知道你是第一次看这四个名词是什么感觉，反正我第一次看的时候感觉就是，好像有点明白，又好像有点不明白。我们重新来推导一下这四个特性，想象一下最开始的数据库连上面一个特性都没有。
+
+### 2.2.1 简陋数据库
+
+```
+update t_user set name = 'fish1' where userId = 10001
+``` 
+
+我用客户端执行了上面一条sql，然后机器突然断电了。
+
+```
+select * from t_user where userId = 10001
+```
+
+重启机器后，我执行上面那条查询语句，发现userId=10001的name为fish，而不是我最后一次输入的fish1！
+
+这是因为数据库在执行完update操作后，竟然没有调用file的sync，让数据强制写落到磁盘上，而是只缓存到内存中，导致数据库掉电后重启造成事务丢失。所以，数据库的第一个要求特性是持久性（Durability)，让每个事务执行后都必须落地磁盘，保证即使机器掉电后数据也不会丢失。
+
+### 2.2.2 D数据库
+
+```
+update t_user set money = money + 100 where userId = 10002
+update t_user set money = money - 100 where userId = 10001
+``` 
+
+我用客户端执行了上面的一条sql，目的是让10001用户转钱给10002用户100元。很不幸的是，在执行完了第一条sql后，机器又断电了。
+
+```
+select * from t_user where userId = 10001
+select * from t_user where userId = 10002
+```
+
+重启机器后，我执行上面那条查询语句，发现10002用户多了100元，而10002用户仍然是保持原值，没有增加100元！
+
+我查，这是多么恶心的事情简直不能忍！数据库应该是要么10001用户少100，同时10002用户多100，要么是都不变，怎么会有个中间状态。所以，数据库的第二个要求特性是原子性（Atomicity），事务要么是全部提交的，要么是全部不提交的，这部分数据库是用日志来实现的。
+
+```
+start trasiaction
+update t_user set money = money - 100 where userId = 10001
+update t_user set money = money + 100 where userId = 10002
+end trasiaction
+```
+
+在这以后，我们提交sql是这么提交的，通过start trasiaction告诉数据库这两条sql连起来是一个事务。
+
+### 2.2.3 AD数据库
+
+```
+start trasiaction
+update t_user set money = money + 100 where userId = 10002
+update t_user set money = money - 100 where userId = 10001
+end trasiaction
+```
+
+我依然用客户端执行了上面的一条sql，目的是让10001用户转钱给10002用户100元。很不幸的是，在执行完了第一条sql后，机器又断电了。
+
+```
+select * from userId = 10002
+```
+
+与此同时，10002的用户在自己家不断调用上面的sql语句，来查询自己有多少钱。我重启机器后，由于Atomicity特性，10002用户的数据回滚了。10002用户在家看到自己的钱突然多了100元，而后又少了100元。他空欢喜了一场，然后投诉我们公司，为什么给了自己100元，然后又突然抽走，他甚至还截图了自己多了100元数据的页面！
+
+为了避免这种恶心的情况，数据库的第三个要求特性是一致性(Consistency)，数据库只能看到提交后事务的数据，不能看到事务操作过程中处于不一致状态的数据。这部分数据库使用MVCC机制来实现的。
+
+### 2.2.4 ACD数据库
+
+```
+start trasiaction
+select * from t_user where userId = 10001
+update t_user set money = money - 100 where userId = 10001 
+update t_user set money = money + 100 where userId = 10002
+end trasiaction
+```
+
+```
+start trasiaction
+select * from t_user where userId = 10001
+update t_user set money = money - 100 where userId = 10001 
+update t_user set money = money + 100 where userId = 10003
+end trasiaction
+```
+
+我们进入了现实中，其实转钱前是需要查询用户够不够钱的，不够钱的话，是不会执行update操作的。所以，在sql前我加上了select操作。问题来了，我们需求是用户10001需要向10002与10003用户各转100元的，当然10001用户只有120元的情况下，他会成功么。答案是，他有可能会成功！
+
+```
+#事务1
+select * from t_user where userId = 10001
+#事务2
+select * from t_user where userId = 10001
+#事务1
+update t_user set money = money - 100 where userId = 10001 
+update t_user set money = money + 100 where userId = 10002
+#事务2
+update t_user set money = money - 100 where userId = 10001 
+update t_user set money = money + 100 where userId = 10003
+```
+
+当两个事务按着上面的顺序交叉执行时，只有120元的10001用户竟然是可以向10002与10003用户各转100元的！
+
+所以，数据库的第四个要求特性是隔离性（Isolation），事务间应该有隔离，如果他们有数据冲突，应该进行上锁操作的。
+
+```
+start trasiaction
+select * from t_user where userId = 10001 for update
+update t_user set money = money - 100 where userId = 10001 
+update t_user set money = money + 100 where userId = 10002
+end trasiaction
+```
+
+```
+start trasiaction
+select * from t_user where userId = 10001 for update
+update t_user set money = money - 100 where userId = 10001 
+update t_user set money = money + 100 where userId = 10003
+end trasiaction
+```
+
+最终，我们的sql加上了for update操作，告诉mysql，我是要对10001用户的数据进行上锁的，其他并发事务要过来的话只能先等我执行完毕了。
+
+#### 2.2.5 ACID数据库
+至此，我们用了转钱的例子，来证明了ACID的每个特性都是多么必要的，不然会导致后果很严重的金钱问题。数据不一致，钱转多了，或者转少了。最后，总结一下ACID特性
+
+* 原子性（Atomicity），强调写一致，要么全部完成，要么全部不完成。
+* 一致性（Consistency），强调读一致，只能看到已经提交的事务数据。
+* 隔离性（Isolation），强调并发一致，即使事务是并发执行的，数据也不会造成不一致。
+* 持久性（Durability)，强调可靠，只要事务提交了，就不会丢失数据。
+
+## 2.3 CAP
+
+### 2.3.1 概述
+在一个CAP分布式系统中， Consistency（一致性）、 Availability（可用性）、Partition tolerance（分区容错性），三者不可得兼。
+
+* 一致性（Consistency）：在分布式系统中的所有数据备份，在同一时刻是否同样的值。（等同于所有节点访问同一份最新的数据副本）
+* 可用性（Availability）：在集群中一部分节点故障后，集群整体是否还能响应客户端的读写请求。（对数据更新具备高可用性）
+* 分区容忍性（Partition tolerance）：以实际效果而言，分区相当于对通信的时限要求。系统如果不能在时限内达成数据一致性，就意味着发生了分区的情况，必须就当前操作在C和A之间做出选择。
+
+CAP原理就像是能量守恒定律一样，给那些想实现永动机，和想实现分布式ACID的人们当头一棒，这是不可能的！
+
+### 2.3.2 分区容忍性
+系统要么是分布式的，要么是单机的。
+
+### 2.3.3 一致性
+这个一致性和ACID的一致性不同，这个一致性是**单个操作**的一致性，而不是**单个事务**（多个操作）的一致性。分布式的一致性有以下几种：
+
+* 强一致性。在更新完成后，（A、B或C进行的）任何后续访问都将返回更新过的值。
+* 弱一致性。系统不保证后续访问将返回更新过的值。
+* 最终一致性。存储系统保证如果对象没有新的更新，最终（在不一致窗口关闭之后）所有访问都将返回最后更新的值。
+
+注意，弱一致性中包含着最终一致性的范围。
+
+### 2.3.4 可用性
+在分布式环境下，有N台机器
+
+* 高可用，N-1台机器都当机了，仍然可以对外服务。
+* 低可用，1太机器当机了，就不能对外服务。
+
+### 2.3.6 总结
+CAP原理看起来是个绝望的结论，但它其实并没有限制构造这样的系统：
+
+* CP系统，中高可用性+一致性，即使当掉了N/2-1台机器，仍然可以对外提供一致性服务。
+* AP系统，最终一致性+高可用性，即使当掉了N-1台机器，仍然可以对外服务，但是数据可能是不一致的，只保证经过一段时间窗口后，数据是最终一致的。
+
+![](/assets/img/14583701507326.jpg)
+
+所以，根据CAP的原理的不同抉择，以及对不同场景下的数据需求，nosql的数据库建立了许多不同模型下的数据库。
+
+## 2.4 BASE
+
+## 2.5 异同
 
 # 3 分布式
 
