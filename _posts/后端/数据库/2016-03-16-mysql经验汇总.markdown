@@ -119,7 +119,7 @@ if 数据行数为空 {
 
 简单的办法是直接前后加事务，问题是这样会直接导致表锁，因为查询操作大多是一个范围操作，这样会导致innodb的表锁，查询性能急剧下降。
 
-#### 3.3.2 唯一索引
+### 3.3.2 唯一索引
 
 ```
 insert ignore t_user values(clientId,xxx) values(xxx)
@@ -131,7 +131,7 @@ replace into t_user values(clientId,xxx)
 
 这是一个mysql的[bug](https://bugs.mysql.com/bug.php?id=28781)，官网说除了将auto_incr设置为锁表操作外，没有其他办法。但是一旦将auto_incr设置为锁表，就会掉入到上一节所说的解决方案的性能上，非常悲催。
 
-#### 3.3.3 唯一索引+query
+### 3.3.3 唯一索引+query
 
 ```
 数据行数 ＝ 查询数据库
@@ -160,7 +160,7 @@ if 数据行数为空 {
 * 缺点：非常慢，顶部新增数据，会导致页面间数据重复。
 * 场景：业务后台管理系统
 
-#### 3.4.2 子查询获取offset的id，然后用id做查询
+### 3.4.2 子查询获取offset的id，然后用id做查询
 
 ![Screen Shot 2016-03-16 at 6.12.26 P](/assets/img/Screen%20Shot%202016-03-16%20at%206.12.26%20PM.png)
 

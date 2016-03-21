@@ -1,6 +1,8 @@
 //挂载页面的事件
+var ISMOBILE = false;
 function initDevice(){
   if ($(window).width() <= 1280) {
+    ISMOBILE = true;
     $('#sidebar').addClass('mobile');
     $('#sidebar, #pjax, #icon-arrow').addClass('fullscreen');
   }
@@ -80,55 +82,84 @@ function initPjax(){
 }
 
 function initAfterPjax(){
-  initDocument();
+  initToc();
   initDisqus();
   initHighLight();
 }
 
-function initDocument(){
+function binarySearchTocLower(list,elem){
+  var left = 0;
+  var right = list.length - 1;
+  while( left <= right ){
+    var middle = Math.floor((left+right)/2);
+    var listMiddle = list[middle].target.offset().top;
+    if( listMiddle == elem ){
+      return middle;
+    }else if( listMiddle > elem ){
+      right = middle - 1;
+    }else{
+      left = middle + 1;
+    }
+  }
+  if( left - 1 < 0 ){
+    return 0;
+  }else{
+    return left - 1;
+  }
+}
+
+function initToc(){
   var container  = $('#post');
   $('#post__content a').attr('target','_blank');
+
   // Generate post TOC for h1 h2 and h3
   var toc = $('#post__toc-ul');
-  // Empty TOC and generate an entry for h1
+  var tocContainer = $('#post__toc');;
+  var tocList = [];
   toc.empty();
-     // .append('<li class="post__toc-li post__toc-h1"><a href="#post__title" class="js-anchor-link">' + $('#post__title').text() + '</a></li>');
 
-  // Generate entries for h2 and h3
-  var onlyOneH1 = ($('#post__content').find('h1').length == 1);
   $('#post__content').find('h1,h2,h3').each(function() {
-    // Generate random ID for each heading
-    $(this).attr('id', function() {
-      var ID = "",
-          alphabet = "abcdefghijklmnopqrstuvwxyz";
-
-      for(var i=0; i < 5; i++) {
-        ID += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
-      }
-      return ID;
-    });
-
-    var tagName = $(this).prop("tagName");
-    if(tagName == 'H3' && !onlyOneH1) return;
-
-    var asTag = onlyOneH1 ? tagName : (tagName == 'H1'?'h2':'h3');
-    toc.append('<li class="post__toc-li post__toc-'+asTag.toLowerCase()+'"><a href="#' + $(this).attr('id') + '" class="js-anchor-link">' + $(this).text() + '</a></li>');
-
+    var elem = $(this);
+    var single = {};
+    single.target = elem;
+    single.tagName = {
+      "h1":"h2",
+      "h2":"h3",
+      "h3":"h4",
+    }[elem.prop("tagName").toLowerCase()];
+    single.text = elem.text();
+    single.id = elem.attr('id');
+    tocList.push(single);
   });
 
-  $('#icon-list').off('click').on('click',function(){
-    $('#post__toc').toggle();
-  });
+  for( var i in tocList ){
+    var singleToc = tocList[i];
+    toc.append('<li class="post__toc-li post__toc-'+singleToc.tagName+'"><a href="#' + singleToc.id + '" class="js-anchor-link">' + singleToc.text + '</a></li>');
+  }
+
+  function updateToc(){
+    var index = binarySearchTocLower(tocList,140);
+    var targetToc = $('#post__toc .post__toc-li');
+    targetToc.eq(index).addClass('active').siblings().removeClass('active');
+    var targetScroll = targetToc.eq(index).offset().top - targetToc.eq(0).offset().top;
+    tocContainer.scrollTop(targetScroll-tocContainer.height()/2);
+  }
+  container.off('scroll').bind('scroll',updateToc);
+  updateToc();
 
   // Smooth scrolling
   $('.js-anchor-link').off('click').on('click', function() {
     var target = $(this.hash);
-    container.animate({scrollTop: target.offset().top + container.scrollTop() - 70}, 500, function() {
+    container.animate({scrollTop: target.offset().top + container.scrollTop() - 140}, 500, function() {
       target.addClass('flash').delay(700).queue(function() {
         $(this).removeClass('flash').dequeue();
       });
     });
   });
+  if( ISMOBILE == false ){
+    $('#post__toc').fadeIn();
+  }
+  
 }
 
 function initDisqus(){

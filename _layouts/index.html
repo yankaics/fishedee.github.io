@@ -48,7 +48,10 @@
         </nav>
       </div> <!-- end #posts-list -->
     </aside> <!-- end #sidebar -->
-
+    <div id="post__toc">
+      <span id="post__toc-title">目录</span>
+      <ul id="post__toc-ul"></ul>
+    </div>
     <div id="post">
       <div id="pjax">
         {{ content }}
@@ -63,16 +66,12 @@
     </div> <!-- end #post -->
 
     <button id="js-fullscreen"><span id="icon-arrow" class="fontello"></span></button>
-    <button id="js-toc"><span id="icon-list" class="fa fa-list-ul"></span></button>
-    <div id="post__toc">
-      <span id="post__toc-title">目录</span>
-      <ul id="post__toc-ul"></ul>
-    </div>
     <!--jquery-->
     <script src="/assets/js/jquery-2.0.3.min.js"></script>
     <script src="/assets/js/jquery.pjax.js"></script>
     <script src="/assets/js/nprogress.js"></script>
     <script src="/assets/js/highlight.pack.js"></script>
+    <script src="/assets/js/toc.js"></script>
     <!--自由代码-->
     <script>
         window['tag1'] = $('.pl__all'),
