@@ -13,3 +13,5 @@ title: fishedee的博客
 * [novoland.github.io](http://novoland.github.io)的博客样式，感谢你的模板主题，是我见过最自然帅气的jekyll模板。
 * mweb的markdown编辑器，粘贴图片时自动复制到/assets/img文件夹，比较方便。
 
+喜欢这个博客模板？你可以在这里[下载](https://github.com/fishedee/fishedee.github.io)
+

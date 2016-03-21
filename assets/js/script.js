@@ -159,6 +159,11 @@ function initToc(){
   if( ISMOBILE == false ){
     $('#post__toc').fadeIn();
   }
+
+  //toggle button
+  $('#icon-list').off('click').on('click',function(){
+    $('#post__toc').toggle('fast');
+  });
   
 }
 
