@@ -3,5 +3,206 @@ layout: post
 category: 前端
 ---
 
-> gradle是下一代的Java代码构建工具，也是安卓项目的默认构建工具。
+# 1 概述
+gradle是下一代的Java代码构建工具，也是安卓项目的默认构建工具。
+
+# 2 安装
+
+```
+export GRADLE_HOME={your gradle path}
+export PATH=$PATH:GRADLE_HOME/bin
+```
+
+1.	安装一个 Java JDK 或者 JRE. 而且 Java 版本必须至少是 6 以上
+2.	从 Gradle网站http://www.gradle.org/downloads下载任意一个已经发布的版本，并解压到任意目录
+3.	添加一个 GRADLE_HOME 环境变量来指明 Gradle 的安装路径
+4.	添加 GRADLE_HOME/bin 到您的 PATH 环境变量中
+
+# 3 组成
+
+![](/assets/img/14586311424493.png)
+
+项目(Project) 和 任务(tasks)，Gradle 里的任何东西都是基于这两个基础概念。
+
+* 项目是指我们的构建产物（比如Jar包）或实施产物（将应用程序部署到生产环境）。
+* 任务是指不可分的最小工作单元，执行构建工作（比如编译项目或执行测试）。
+* 每一个构建都是由一个或多个 projects 构成的，每一个 project 是由一个或多个 tasks 构成的，一个 task是指不可分的最小工作单元，执行构建工作（比如编译项目或执行测试）。
+
+# 4 语法
+
+## 4.1 概述
+gradle是一个基于groovy的DSL，其本质仍然是一个groovy语言,groovy是一个跑在jvm de1yufan1.
+
+## 4.2 基础变量
+
+```
+def intVar = 1
+println intVar 
+println intVar + 3
+
+def stringVar = "hello"
+def stringVar2 = "world"
+println stringVar + " " + stringVar2
+println stringVar + "${intVar}"
+```
+
+上述代码展示了整数和字符串的用法
+
+## 4.3 集合变量
+
+```
+def collect = ["a","b","c"]
+collect = collect + 1
+println collect
+println collect.size()
+println collect[1]
+
+def map=['name':'john','age':14,'sex':'boy']
+map = map + ['xx':'oo']
+println map
+println map.size()
+println map['xx']
+```
+
+上述代码展示了数组和映射的用法
+
+## 4.4 控制结构
+
+```
+for(i in 0..10){
+	println i
+}
+
+def mm = 23
+if( mm % 2 == 0 ){
+	println "even"
+}else{
+	println "odd"
+}
+```
+
+上述代码展示了if和for的用法
+
+## 4.5 函数
+
+```
+int go(int kk){
+	kk *10
+}
+
+println "HelloWorld ${go(1)}"
+```
+
+上述代码展示了函数的用法
+
+# 5 任务
+
+## 5.1 定义任务
+
+```
+//build.gradle
+task helloWorld << {
+   println "Hello World!"
+}
+```
+
+找一个位置，输入上面的代码，并保存为build.gralde
+
+![Screen Shot 2016-03-22 at 2.48.42 P](/assets/img/Screen%20Shot%202016-03-22%20at%202.48.42%20PM.png)
+
+输入gradle helloworld，会弹出著名的helloworld。
+例子中可以看出，gradle的用法与makefile很类似，在gradle文件中定义task的行为，然后用gradle命令来指定gradle的目标任务即可执行。
+
+## 5.2 任务依赖
+
+```
+task hello << {
+    println 'Hello world!'
+}
+task intro(dependsOn: hello) << {
+    println "I'm Gradle"
+}
+```
+
+定义两个任务，其中intro依赖hello
+
+```
+task hello << {
+    println 'Hello world!'
+}
+task intro << {
+    println "I'm Gradle"
+}
+intro.dependsOn hello
+```
+
+或者你可以这么写
+
+![Screen Shot 2016-03-22 at 3.24.41 P](/assets/img/Screen%20Shot%202016-03-22%20at%203.24.41%20PM.png)
+
+启动intro任务后，会启动hello任务
+
+## 5.3 动态任务
+
+```
+for( counter in 0..4 ){
+	def single = counter
+    task "task$counter" << {
+        println "I'm task number $single"
+    }
+    if( counter == 0 ){
+    	continue
+    }
+    def prevCounter = counter - 1
+    tasks["task$counter"].dependsOn tasks["task$prevCounter"]
+}
+```
+
+![Screen Shot 2016-03-22 at 3.24.41 P](/assets/img/Screen%20Shot%202016-03-22%20at%203.24.41%20PM-1.png)
+
+动态创建任务，以及建立任务之间的依赖关系
+
+## 5.6 默认任务
+
+```
+defaultTasks 'clean', 'run'
+
+task clean << {
+    println 'Default Cleaning!'
+}
+
+task run << {
+    println 'Default Running!'
+}
+
+task other << {
+    println "I'm not a default task!"
+}
+```
+
+![Screen Shot 2016-03-22 at 5.40.43 P](/assets/img/Screen%20Shot%202016-03-22%20at%205.40.43%20PM.png)
+
+建立默认任务
+
+# 6 安卓项目
+
+# 6.1 gradle的生命周期
+
+```
+//gradle生命周期
+addListener(listener)
+afterProject(closure)
+beforeProject(closure)
+buildFinished(closure)
+settingsEvaluated(closure)
+taskGraph.whenReady
+projectsLoaded
+
+//project生命周期
+project.afterEvaluate()
+project.beforeEvaluate()
+```
+
+一般会在特定生命周期后加入任务依赖的设置。
+
 
