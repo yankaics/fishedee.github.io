@@ -57,19 +57,74 @@ DexposedBridge.findAndHookMethod(Activity.class, "onCreate", Bundle.class, new X
 andfix是阿里巴巴的在线补丁修复方案，用法在图上说的很清楚了，就是运行时替换一个函数，然后将原来的函数动态替换掉就可以了。
 
 ```
-private void fixClass(Class<?> clazz, ClassLoader classLoader) { 	Method[] methods = clazz.getDeclaredMethods(); 	MethodReplace methodReplace; 	String clz; 	String meth; 	for (Method method : methods) { 		methodReplace = method.getAnnotation(MethodReplace.class); 		if (methodReplace == null) 			continue; 		clz = methodReplace.clazz(); 		meth = methodReplace.method(); 		if (!isEmpty(clz) && !isEmpty(meth)) { 			replaceMethod(classLoader, clz, meth, method); 		} 	} }
+private void fixClass(Class<?> clazz, ClassLoader classLoader) {
+	Method[] methods = clazz.getDeclaredMethods();
+	MethodReplace methodReplace;
+	String clz;
+	String meth;
+	for (Method method : methods) {
+		methodReplace = method.getAnnotation(MethodReplace.class);
+		if (methodReplace == null)
+			continue;
+		clz = methodReplace.clazz();
+		meth = methodReplace.method();
+		if (!isEmpty(clz) && !isEmpty(meth)) {
+			replaceMethod(classLoader, clz, meth, method);
+		}
+	}
+}
 ```
 
 在看andFix的源代码时发现，它的动态代码替换是通过andFixManager中的fixClass来实现，通过需要hook的类的method，和原来的method，然后在native上进行代码强制替换就可以了。这种技术有点像以前在C++函数前加上jmp指令来强制hook函数。
 
 ```
-class HookImageRequestBuilder{     static Class originClass;     static Constructor originClassContructor;     public static Class init() throws Exception{         originClass = com.facebook.imagepipeline.request.ImageRequestBuilder.class;         originClassContructor = originClass.getDeclaredConstructor();         originClassContructor.setAccessible(true);         return HookImageRequestBuilder.class;     }      private static ImageRequestBuilder origin(Uri uri)throws Exception{         Object result = originClassContructor.newInstance();         return ((ImageRequestBuilder)result).setSource(uri);     }      @MethodReplace(clazz="com.facebook.imagepipeline.request.ImageRequestBuilder",method="newBuilderWithSource")     public static ImageRequestBuilder newBuilderWithSource(Uri uri) {         try {             Log.i("BugTracker", "newBuilderWithSource " + uri.toString());             BuglyLog.i("BugTracker", "newBuilderWithSource " + uri.toString());             return origin(uri);         }catch(Exception e){             e.printStackTrace();             return null;         }     } }
+class HookImageRequestBuilder{
+    static Class originClass;
+    static Constructor originClassContructor;
+    public static Class init() throws Exception{
+        originClass = com.facebook.imagepipeline.request.ImageRequestBuilder.class;
+        originClassContructor = originClass.getDeclaredConstructor();
+        originClassContructor.setAccessible(true);
+        return HookImageRequestBuilder.class;
+    }
 
-public class BugTracker {      public static void init(Context context){         try {             AndFixManager andFixManager = new AndFixManager(context);             ClassLoader classLoader = context.getClassLoader();             Method andFixClass = andFixManager.getClass().getDeclaredMethod("fixClass", Class.class, ClassLoader.class);             andFixClass.setAccessible(true);              andFixClass.invoke(andFixManager, HookImageRequestBuilder.init(), classLoader);         }catch(Exception e){             e.printStackTrace();         }     } }
+    private static ImageRequestBuilder origin(Uri uri)throws Exception{
+        Object result = originClassContructor.newInstance();
+        return ((ImageRequestBuilder)result).setSource(uri);
+    }
+
+    @MethodReplace(clazz="com.facebook.imagepipeline.request.ImageRequestBuilder",method="newBuilderWithSource")
+    public static ImageRequestBuilder newBuilderWithSource(Uri uri) {
+        try {
+            Log.i("BugTracker", "newBuilderWithSource " + uri.toString());
+            BuglyLog.i("BugTracker", "newBuilderWithSource " + uri.toString());
+            return origin(uri);
+        }catch(Exception e){
+            e.printStackTrace();
+            return null;
+        }
+    }
+}
+public class BugTracker {
+    public static void init(Context context){
+        try {
+            AndFixManager andFixManager = new AndFixManager(context);
+            ClassLoader classLoader = context.getClassLoader();
+            Method andFixClass = andFixManager.getClass().getDeclaredMethod("fixClass", Class.class, ClassLoader.class);
+            andFixClass.setAccessible(true);
+
+            andFixClass.invoke(andFixManager, HookImageRequestBuilder.init(), classLoader);
+            andFixClass.invoke(andFixManager,HookImageDecoder.init(),classLoader);
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+}
 ```
 
-既然如此，解决办法就很简单了，将andFixManager的fixClass私有函数用反射的技术来强制调用，然后将要hook的函数，和原函数，调入到andFixManager的fixClass上就可以了。
+既然如此，解决办法就很简单了，将andFixManager的fixClass私有函数用反射的技术来强制调用，然后将要hook的函数，和原函数，调入到andFixManager的fixClass上就可以了。以上的代码就是Hook函数com.facebook.imagepipeline.request.ImageRequestBuilder.newBuilderWithSource方法的范例。
 
-优点是支持2.3~6.0的所有安卓设备，缺点是，这种AOP的方式并不彻底，如果需要调用原函数时，只能将原函数的代码复制过来，并不能像Dexposed一样设置调用函数前后的hook。
+* 优点是支持2.3~6.0的所有安卓设备
+* 缺点是这种AOP的方式并不彻底，如果需要调用原函数时，只能将原函数的代码复制过来，并不能像Dexposed一样设置调用函数前后的hook。
 
 
