@@ -1,0 +1,75 @@
+---
+layout: post
+category: 前端
+---
+
+# 1 概述
+安卓AOP技术，AOP，是指面向切面编程，常用日志打印，代码动态替换等方面上。例如，我们在bugly等崩溃收集平台时，发现调用部分库函数时会崩溃，我们希望这个库函数调用前后可以打印一下日志，这样好排查问题。但是库函数是系统内置的，无法提前修改源代码，这时就需要用到AOP技术了——一种动态修改源代码的能力。
+
+# 2 dexposed
+[dexposed](https://github.com/alibaba/dexposed)是阿里巴巴做的一款动态注入代码的工具，使用方法极其简单，输入指定的函数，然后设置这个函数前干啥，这个函数干啥，就能实现AOP了。
+
+```
+// Target class, method with parameter types, followed by the hook callback (XC_MethodHook).
+DexposedBridge.findAndHookMethod(Activity.class, "onCreate", Bundle.class, new XC_MethodHook() {
+
+  // To be invoked before Activity.onCreate().
+  @Override protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+      // "thisObject" keeps the reference to the instance of target class.
+      Activity instance = (Activity) param.thisObject;
+
+      // The array args include all the parameters.
+      Bundle bundle = (Bundle) param.args[0];
+      Intent intent = new Intent();
+      // XposedHelpers provide useful utility methods.
+      XposedHelpers.setObjectField(param.thisObject, "mIntent", intent);
+
+      // Calling setResult() will bypass the original method body use the result as method return value directly.
+      if (bundle.containsKey("return"))
+          param.setResult(null);
+  }
+
+  // To be invoked after Activity.onCreate()
+  @Override protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+      XposedHelpers.callMethod(param.thisObject, "sampleMethod", 2);
+  }
+});
+```
+
+以上代码就是将Activity的onCreate前后加入指定的代码，来实现AOP的。
+
+|Runtime|Android Version|Support|
+|:--|:--|:--|
+|Dalvik|2.2|Not Test|
+|Dalvik|2.3|Yes|
+|Dalvik|3.0|No|
+|Dalvik|4.0-4.4|Yes|
+|ART|5.0|Testing|
+|ART|5.1|No|
+|ART|M|No|
+
+但是，dexposed的最大问题是竟然不支持ART的安卓设置，简直不能忍。而且，从15年10月开始就停止更新了，看来阿里巴巴是要放弃这个技术了。如果你用AOP只是想做自动化测试的话，到是可以试试，如果要发布到正式环境，那还是算了吧。
+
+# 3 andfix
+
+![](/assets/img/14588998395673.png)
+
+andfix是阿里巴巴的在线补丁修复方案，用法在图上说的很清楚了，就是运行时替换一个函数，然后将原来的函数动态替换掉就可以了。
+
+```
+private void fixClass(Class<?> clazz, ClassLoader classLoader) { 	Method[] methods = clazz.getDeclaredMethods(); 	MethodReplace methodReplace; 	String clz; 	String meth; 	for (Method method : methods) { 		methodReplace = method.getAnnotation(MethodReplace.class); 		if (methodReplace == null) 			continue; 		clz = methodReplace.clazz(); 		meth = methodReplace.method(); 		if (!isEmpty(clz) && !isEmpty(meth)) { 			replaceMethod(classLoader, clz, meth, method); 		} 	} }
+```
+
+在看andFix的源代码时发现，它的动态代码替换是通过andFixManager中的fixClass来实现，通过需要hook的类的method，和原来的method，然后在native上进行代码强制替换就可以了。这种技术有点像以前在C++函数前加上jmp指令来强制hook函数。
+
+```
+class HookImageRequestBuilder{     static Class originClass;     static Constructor originClassContructor;     public static Class init() throws Exception{         originClass = com.facebook.imagepipeline.request.ImageRequestBuilder.class;         originClassContructor = originClass.getDeclaredConstructor();         originClassContructor.setAccessible(true);         return HookImageRequestBuilder.class;     }      private static ImageRequestBuilder origin(Uri uri)throws Exception{         Object result = originClassContructor.newInstance();         return ((ImageRequestBuilder)result).setSource(uri);     }      @MethodReplace(clazz="com.facebook.imagepipeline.request.ImageRequestBuilder",method="newBuilderWithSource")     public static ImageRequestBuilder newBuilderWithSource(Uri uri) {         try {             Log.i("BugTracker", "newBuilderWithSource " + uri.toString());             BuglyLog.i("BugTracker", "newBuilderWithSource " + uri.toString());             return origin(uri);         }catch(Exception e){             e.printStackTrace();             return null;         }     } }
+
+public class BugTracker {      public static void init(Context context){         try {             AndFixManager andFixManager = new AndFixManager(context);             ClassLoader classLoader = context.getClassLoader();             Method andFixClass = andFixManager.getClass().getDeclaredMethod("fixClass", Class.class, ClassLoader.class);             andFixClass.setAccessible(true);              andFixClass.invoke(andFixManager, HookImageRequestBuilder.init(), classLoader);         }catch(Exception e){             e.printStackTrace();         }     } }
+```
+
+既然如此，解决办法就很简单了，将andFixManager的fixClass私有函数用反射的技术来强制调用，然后将要hook的函数，和原函数，调入到andFixManager的fixClass上就可以了。
+
+优点是支持2.3~6.0的所有安卓设备，缺点是，这种AOP的方式并不彻底，如果需要调用原函数时，只能将原函数的代码复制过来，并不能像Dexposed一样设置调用函数前后的hook。
+
+
