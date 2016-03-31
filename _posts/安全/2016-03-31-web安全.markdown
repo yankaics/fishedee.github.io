@@ -338,7 +338,7 @@ select * from users where username='' or 1=1#' and password=md5('')
 ![Screen Shot 2016-03-31 at 10.16.13 P](/assets/img/Screen%20Shot%202016-03-31%20at%2010.16.13%20PM.png)
 
 ```
-' or select * from t_user#
+' union select * from t_user#
 ```
 
 还记得传说中的csdn拖库造成640万用户资料丢失的事件么，就是因为一个sql注入漏洞，加上密码明文保存，一刹那间用户密码丢失一大堆。再加上用户密码经常是几个账号都用同一个，撞掉一个库，等于撞掉一片库，死伤惨重。
