@@ -1,4 +1,9 @@
-# 
+---
+layout: post
+category: 生活
+---
+
+# 概述
 
 知识是第一生产力么？
 https://www.douban.com/note/251143203/
