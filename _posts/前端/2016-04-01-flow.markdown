@@ -200,5 +200,5 @@ flow则使用与react原生兼容的写法来做类型检查
 
 # 7 总结
 
-flow的类型检查上比typescript更彻底，null与undefined不能作为合法值。另外，跟typescript不同的是，它并没有成为一个javascript方言的编译器，而只是成为现有javascript语法的类型检查器。
+flow的类型检查上比typescript更合理，null与undefined不能作为合法值。另外，跟typescript不同的是，它并没有成为一个javascript方言的编译器，而只是成为现有javascript语法的类型检查器。
 
