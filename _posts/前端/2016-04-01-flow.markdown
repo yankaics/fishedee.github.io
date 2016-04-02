@@ -1,0 +1,204 @@
+---
+layout: post
+category: 前端
+---
+
+# 1 概述
+flow是facebook出的一套javascript类型静态检查系统，其跟typescript最大的不同是，其同时支持静态与动态类型检查，而typescript只支持静态类型检查。另外，其与typescript不同的是，它并没有像typescript一样企图做一个编译器，而是只做一个静态类型检查工具。所有的代码即使编译时出错，也不会影响跑起来的代码。比较适合codebase从无类型化逐渐切换到类型化。
+
+```
+function length(x) {
+  return x.length;
+}
+var total = length('Hello') + length(null);
+```
+
+输入以上这段代码
+
+```
+/Users/fish/Test/flow/index.js:6:31,42: function call
+Error:
+/Users/fish/Test/flow/index.js:4:9,16: property length
+Property cannot be accessed on possibly null value
+/Users/fish/Test/flow/index.js:6:38,41: null
+```
+
+然后flow做类型检查时就会弹出以上的错误提示，可以看出flow的静态类型检查方式更为智能。
+
+# 2 基础类型
+
+## 2.1 数值类型
+
+```
+var isDone : boolean = false;
+var decimal : number = 6;
+var hex: number = 0xf00d;
+console.log(isDone);
+console.log(decimal);
+console.log(hex);
+```
+
+跟typescript类似，但是不支持二进制与八进制的输入
+
+## 2.2 字符串类型
+
+```
+var str1: string = "str1";
+var str2: string = "str2";
+
+console.log(str1);
+console.log(str1+str2);
+console.log(`mm_${str1}_dd_${str2}`);
+```
+
+跟typescript类似
+
+## 2.3 数组类型
+
+```
+var list:number[] = [1,2,3]
+
+console.log(list);
+list.push(4);
+console.log(list);
+for( var i : number = 0 ; i != list.length ; ++i ){
+	console.log(list[i]);
+}
+
+console.log(list[124]);
+```
+
+与typescript类似
+
+## 2.4 枚举
+
+没有枚举类型
+
+## 2.5 通用类型
+
+```
+var notSure: any = 4;
+notSure = "maybe a string instead";
+
+console.log(notSure);
+
+notSure = false;
+
+console.log(notSure);
+```
+
+与typescript类似
+
+## 2.6 空值
+
+```
+function warnUser(): void {
+    alert("This is my warning message");
+}
+```
+
+与typescript类似
+
+## 2.7 null与undefined
+
+```
+function optional_fun(foo : string) {
+  console.log(foo);
+}
+optional_fun("foo");
+optional_fun(undefined);
+optional_fun(null);
+```
+
+后面两个会报出错误，这里与typescript不同，flow对null与undefined的检查要求很高
+
+## 2.8 自动类型推导
+
+```
+function mc(m){
+	console.log(m.length);
+}
+mc(3);
+mc("3");
+```
+
+含有强力的自动类型推导，这段代码在编译时就会报错，但是在typescript编译时不会通过。（typescript在开启--noImplicitAny会加强这个检查）
+
+# 3 函数
+
+```
+// @flow
+
+function mc(m :string) :string{
+	if( m == "1"){
+		return "2"
+	}
+}
+mc("1");
+mc("3");
+```
+
+flow仅仅是静态检查器，所以没有扩展javascript在函数中的使用，也就没有typescript中关于函数的各种用法。在上面的例子中，由于对待null与undefined的不同，上述代码会报错，但typescript并不会。（typescript在开启--noImplicitReturns会加强这个检查）
+
+# 4 类
+
+```
+// @flow
+class C {
+  x: string;
+  y: number;
+  constructor(x) { this.x = x; }
+  foo() { return this.x; }
+  bar(y) { this.y = y; }
+}
+
+class D extends C {
+  foo() { return super.foo() + "!"; }
+  bar(y) { super.bar(y || 0); }
+
+  static qux() { return new D("hello"); }
+}
+
+var c: C = new D("D extends C");
+```
+
+flow没有扩展javascript语法，用法就像普通javascript一样。这里木有什么好说的。
+
+# 5 接口
+
+```
+type MyType = {message: string; isAwesome: boolean};
+function sayHello(data: MyType) {
+  console.log(data.message);
+}
+
+var mySampleData: MyType = {message: 'Hello World', isAwesome: true};
+sayHello(mySampleData);
+sayHello({message: 'Hi', isAwesome: false});
+```
+
+flow依然没有接口类型，比较简单暴力地解决了这个问题。
+
+# 6 jsx
+
+```
+const Greeter = React.createClass({
+  propTypes: {
+    name: React.PropTypes.string.isRequired,
+  },
+  render() {
+    return <p>Hello, {this.props.name}!</p>;
+  },
+});
+
+<Greeter />; // Missing `name`
+<Greeter name={null} />; // `name` should be a string
+<Greeter name="World" />; // "Hello, World!"
+```
+
+flow则使用与react原生兼容的写法来做类型检查
+
+# 7 总结
+
+flow的类型检查上比typescript更彻底，null与undefined不能作为合法值。另外，跟typescript不同的是，它并没有成为一个javascript方言的编译器，而只是成为现有javascript语法的类型检查器。
+
