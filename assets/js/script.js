@@ -216,13 +216,18 @@ function initHighLight(){
       return $(codeHtml);
     }
     function initLineNumber(){
-      $('pre code').each(function(i, block) {
+      $('code').each(function(i, block) {
         block = $(block);
         if( block.hasClass("lineno") ){
           return;
         }
         if( block.prev().hasClass("lineno")){
           return;
+        }
+        if( block.parent().is('pre') == false ){
+          console.log(block.parent().html());
+          block.wrap('<pre></pre>');
+          console.log(block.parent().html());
         }
         var linenumber = getLinenumber(block.text());
         var div = generateLineDiv(linenumber);
@@ -233,7 +238,7 @@ function initHighLight(){
       hljs.configure({
         tabReplace: '    ', // 4 spaces
       });
-      $('pre code').each(function(i, block) {
+      $('code').each(function(i, block) {
         hljs.highlightBlock(block);
       });
     }
