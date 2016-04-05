@@ -1,0 +1,179 @@
+---
+layout: post
+category: 前端
+---
+
+# 1 概述
+安卓webview通信，安卓的webview与javascript之间如何安全可靠高效的通信，这个看似简单的问题，其实很头疼。
+
+# 2 原始方法
+
+```
+//设置支持javascript 
+setting.setJavaScriptEnabled(true); 
+//javascript->Java
+webView.addJavascriptInterface(new Object(){   
+	public void startPhone(String num){ 
+		Intent intent=new Intent(); 
+	                   
+		intent.setAction(Intent.ACTION_CALL); 
+		intent.setData(Uri.parse("tel:"+num)); 
+		startActivity(intent); 
+	}
+}, "demo"); 
+//Java->javascript
+webView.loadUrl("javascript:alert(123)"); 
+```
+
+使用webview下的addJavascriptInterface就能实现javascript通信给java，而loadUrl就能实现java通信给javascript。这个方案优点在于简单可靠，缺点是无法传入javascript中的闭包参数，而且4.2版本下的安卓还有[安全性问题](http://www.yssec.com/newsdetail.asp?vid=1009)
+
+# 3 拦截url
+
+``` public WebResourceResponse shouldInterceptRequest(WebView view,String url) {
+	return m_jsInterface.shouldInterceptLoadRequest(url);
+}
+```
+
+安卓的setWebViewClient中提供了可以拦截url请求的方法，如果我们将所有javascript对java的接口调用改为ajax请求，然后返回时像服务器一样将数据写入WebResourceResponse不就可以了。
+
+```
+public WebResourceResponse shouldInterceptLoadRequest(String url) {
+    try{
+        //校验协议
+        final Uri urlInfo = Uri.parse(url);
+        if( urlInfo.getScheme().equals("http") == false )
+            return null;
+        //校验pathInfo
+        List<String> pathInfo = urlInfo.getPathSegments();
+        if( pathInfo.size() != 3 ){
+            return null;
+        }
+        final String schemaName = pathInfo.get(0);
+        final String objectName = pathInfo.get(1);
+        final String methodName = pathInfo.get(2);
+        if( schemaName.equals("crossapi") == false )
+            return null;
+        Log.d("SafeWebView","crossapi request "+url);
+
+        final PipedOutputStream out = new PipedOutputStream();
+        PipedInputStream in = new PipedInputStream(out);
+
+        //调用接口
+        invokeBridge(objectName,methodName,new SafeWebViewJsInferfaceUriBridge(urlInfo,out));
+        return new WebResourceResponse("text/plain","utf-8",in);
+    }catch(Exception e){
+        e.printStackTrace();
+        return null;
+    }
+}
+```
+
+写法还是蛮简单的，要注意的是使用PipedOutputStream来输出数据，避免在shouldInterceptLoadRequest长时间执行，导致UI线程阻塞
+
+```
+$.get("/crossapi/device/waitResponse",{test:"你好"},function(data){
+     console.log(JSON.stringify(data));
+ });
+```
+
+像ajax一样调用远程请求，来实现javascript调用java即可，java回调javascript则通过的是WebResponse写入。这种方法用很好的安全性，而且兼容性也很好，而且也支持javascript的闭包参数传入。
+
+我们将这种办法也在线上沿用了很久，基本也没什么问题。可是，在做友盟推送接口发现，这种做法的系统消耗比较大，而且如果一个接口的阻塞比较久不返回，就会连累其他接口不及时返回。每次回调的次数只能是一次，不能说javascript请求一次java后，java能无限次地回调javascript接口，这个限制使得在做推送接口时也显得比较麻烦。
+
+# 4 拦截confirm+loadUrl调用
+
+```
+@Override
+public boolean onJsConfirm(WebView view, String url, String message,
+                           JsResult result) {
+    boolean isHandle = m_jsInterface.onJsConfirm(view, message);
+    if( isHandle ){
+        result.confirm();
+        return true;
+    }
+    return super.onJsConfirm(view, url, message, result);
+}
+```
+
+安卓的setWebChromeClient中提供了可以拦截confirm,alert和prompt，如果我们在这里将请求拦截，然后返回时使用loadUrl来注入javascript不就可以返回了。问题是，loadUrl只支持基本类型的回调，不支持javascript的闭包回调，怎么办？
+
+```
+var CrossapiCallbackPool = [];
+var Crossapi = function(url,argv,callback){
+	CrossapiCallbackPool.push(callback);
+	var callbackId = CrossapiCallbackPool.length - 1;
+	var bundle = {
+		url:url,
+		argv:argv,
+		callback:callbackId,
+	};
+	var prefix = "CrossApiBridge:"+JSON.stringify(bundle);
+	confirm(prefix);
+};
+```
+
+解决办法时，传入confirm前，将闭包数据转换为CallbackPool上一个整数ID就可以了，这样回调时使用
+
+```
+window.CrossapiCallbackPool[callbackId](xxxx)
+```
+
+就能实现java对javascript数据的闭包回调了
+
+```
+public boolean onJsConfirm(WebView webView,String message){
+    try{
+        //校验协议
+        String prefix = "CrossApiBridge:";
+        if( message.startsWith(prefix) == false ){
+            return false;
+        }
+        JSONTokener tokener = new JSONTokener(message.substring(prefix.length()));
+        JSONObject invokeInfo = (JSONObject)tokener.nextValue();
+        String url = invokeInfo.getString("url");
+        Object argv = invokeInfo.get("argv");
+        int callbackId = invokeInfo.getInt("callback");
+
+        String[] splitInfoTemp = url.split("/");
+        List<String> splitInfo = new ArrayList<String>();
+        for( String singleSplit : splitInfoTemp){
+            if( singleSplit.trim().length() == 0 ){
+                continue;
+            }
+            splitInfo.add(singleSplit.trim());
+        }
+        if( splitInfo.size() < 2 ){
+            return false;
+        }
+        if( argv instanceof JSONObject == false ){
+            return false;
+        }
+        final String objectName = splitInfo.get(0);
+        final String methodName = splitInfo.get(1);
+
+        //调用接口
+        invokeBridge(objectName,methodName,new SafeWebViewJsInferfacePromptBridge((JSONObject)argv,webView,callbackId));
+        return true;
+    }catch(Exception e){
+        e.printStackTrace();
+        return false;
+    }
+}
+```
+
+写法还是挺简单的，要注意的是，这种方法需要预先在javascript环境中注入代码，不然回调中用不了。可以指定用户加载某个javascript文件，而这个文件默认在放在安卓本地环境，这样的话javascript用户用起来比较方便。
+
+```
+Crossapi("/device/waitResponse",{test:"你好"},function(data){
+	console.log(data);
+});
+```
+
+调用时直接调用即可，这种方法较好地实现了，安全，高效，支持闭包传递的特性，解决了拦截url的多请求阻塞问题。我们也在逐步迁移到这种webviewbridge的手法上。这也是目前较为流行的[做法](https://github.com/pedant/safe-java-js-webview-bridge)
+
+# 5 总结
+怎样建立一个可靠的webviewbridge，这个问题其实也不简单噢，需要好好考虑一下。
+
+
+
+
