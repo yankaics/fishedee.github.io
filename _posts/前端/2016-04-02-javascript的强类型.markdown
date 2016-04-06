@@ -45,7 +45,32 @@ result.func2(2);
 
 在以上代码在flow中会造成类型检查的漏检，而typescript中则直接报错，因为flow认为result中的部分属性是动态，所以放松了检查，但是typescript则认为类型应该为静态，不允许动态加载的，所以报错的。
 
-### 3.2.2 强制类型转换
+### 3.2.2 react嵌套
+
+```
+import React from 'react';
+
+var Greeter = React.createClass({
+  propTypes: {
+    name: React.PropTypes.object.isRequired,
+  },
+  render() {
+    return <p>Hello, {this.props.name.mm}!</p>;
+  },
+});
+
+var Greeter2 = React.createClass({
+  render() {
+    return (<Greeter name={{cc:3,mm23:4}}/>);
+  },
+});
+
+<Greeter2/>
+```
+
+以上传递在嵌套react中,flow会造成更严重的漏检问题，仅仅会检查输入的参数是否为object，而没有去检查object是否有合适的属性。
+
+### 3.2.3 强制类型转换
 
 ```
 let str : any = "xxs" ;
@@ -55,7 +80,7 @@ console.log(num);
 
 无法是flow与typescript，当遇到强制类型转换时，并不会插入runtime代码来检查程序员所做的检查是否为正确的，而是选择了信任程序员，这导致了上面的num变量为number类型，但运行时成为string类型，而且并没有抛异常。
 
-### 3.2.3 数组越界与映射越界
+### 3.2.4 数组越界与映射越界
 
 ```
 let array1 : number[] = [1,2,3,4];
@@ -67,7 +92,7 @@ console.log(array2["123"]);
 
 无论是flow与typescript，当数组或映射越界时，也不会抛异常，而是仅仅返回了undefined。
 
-### 3.2.4 动态检查
+### 3.2.5 动态检查
 
 ```
 //原代码
