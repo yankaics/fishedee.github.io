@@ -4,9 +4,28 @@ category: 前端
 ---
 
 # 1 概述
+安卓webview经验汇总
+
+# 2 引擎
+
+## 2.1 自带
+安卓自带有一个webview引擎，优点是安装包比较小，缺点是兼容性有很多问题，而且还各种bug，4.2以下的addJavascriptInterface的注入攻击。
+
+## 2.2 Crosswalk
+Intel赞助的一个项目，将chromium移植到手机上，安装包上包含的就是一整个chromium的webview引擎，所以安装包比较大，22m，优点是快，兼容性好，稳定性好，缺点是大，炒鸡大。
+
+后来出了Crosswalk-Lite，说是将Chromium中的webgl等不必要的部分删掉，精简成一个只包含常用功能的webview引擎，有用过，可是比较不稳定，而且第一次启动时还会因为解压压缩包的原因导致超级慢，不推荐使用。
+
+## 2.3 X5
+QQ家的项目，由于微信与QQ中内置了一个自带的浏览器内核，所以开放出浏览器内核X5引擎，当用户装有微信或QQ时，会自动切换为X5内核的浏览器，否则会使用自带的浏览器。支持的html5特性没有Crosswalk标准而且全面，但胜在微信与QQ的安装率很高，所以在对安装包有严格限制的情况下，非常推荐使用X5引擎。另外，X5引擎自带有video全屏，图片上传等功能，这点比Crosswalk要好。
+
+## 2.4 总结
+如果是纯粹的hybrid项目，是比较建议使用Crosswalk的，质量很好，我们线上的app平均崩溃率只有0.2%。如果对安装包大小有要求，或者webview只是app中嵌套的一个小功能，则建议使用X5引擎。
+
+# 3 webview通信
 安卓webview通信，安卓的webview与javascript之间如何安全可靠高效的通信，这个看似简单的问题，其实很头疼。
 
-# 2 原始方法
+## 3.1 原始方法
 
 ```
 //设置支持javascript 
@@ -27,7 +46,7 @@ webView.loadUrl("javascript:alert(123)"); 
 
 使用webview下的addJavascriptInterface就能实现javascript通信给java，而loadUrl就能实现java通信给javascript。这个方案优点在于简单可靠，缺点是无法传入javascript中的闭包参数，而且4.2版本下的安卓还有[安全性问题](http://www.yssec.com/newsdetail.asp?vid=1009)
 
-# 3 拦截url
+## 3.2 拦截url
 
 ``` public WebResourceResponse shouldInterceptRequest(WebView view,String url) {
 	return m_jsInterface.shouldInterceptLoadRequest(url);
@@ -80,7 +99,7 @@ $.get("/crossapi/device/waitResponse",{test:"你好"},function(data){
 
 我们将这种办法也在线上沿用了很久，基本也没什么问题。可是，在做友盟推送接口发现，这种做法的系统消耗比较大，而且如果一个接口的阻塞比较久不返回，就会连累其他接口不及时返回。每次回调的次数只能是一次，不能说javascript请求一次java后，java能无限次地回调javascript接口，这个限制使得在做推送接口时也显得比较麻烦。
 
-# 4 拦截confirm+loadUrl调用
+## 3.3 拦截confirm+loadUrl调用
 
 ```
 @Override
@@ -171,8 +190,25 @@ Crossapi("/device/waitResponse",{test:"你好"},function(data){
 
 调用时直接调用即可，这种方法较好地实现了，安全，高效，支持闭包传递的特性，解决了拦截url的多请求阻塞问题。我们也在逐步迁移到这种webviewbridge的手法上。这也是目前较为流行的[做法](https://github.com/pedant/safe-java-js-webview-bridge)
 
-# 5 总结
+## 3.4 总结
 怎样建立一个可靠的webviewbridge，这个问题其实也不简单噢，需要好好考虑一下。
+
+# 4 配置
+
+## 4.1 硬件加速
+
+## 4.2 javascript
+
+## 4.3 对话框
+
+## 4.4 缓存
+
+## 4.5 cookie
+
+## 4.6 其它
+
+
+
 
 
 
