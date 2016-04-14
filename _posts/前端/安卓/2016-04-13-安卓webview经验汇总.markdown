@@ -197,15 +197,286 @@ Crossapi("/device/waitResponse",{test:"你好"},function(data){
 
 ## 4.1 硬件加速
 
+```
+<application
+	android:hardwareAccelerated="true"
+	android:allowBackup="false"
+	android:label="@string/app_name"
+	android:icon="@mipmap/ic_launcher"
+	android:theme="@style/AppTheme"
+	tools:replace="android:allowBackup">
+</application>
+```
+
+在AndroidManifest中设置android:hardwareAccelerated为true，开启硬件加速模式
+
 ## 4.2 javascript
 
-## 4.3 对话框
+```
+this.getSettings().setJavaScriptEnabled(true);
+```
 
-## 4.4 缓存
+开启webview的javascript，不然网页中的javascript代码默认是不启动的。
 
-## 4.5 cookie
+## 4.3 视频
+全屏播放视频有两种模式，分别是webkit播放模式和x5播放模式
 
-## 4.6 其它
+### 4.3.1 webkit播放模式
+webkit播放模式是默认的播放模式，自带浏览器，Crosswalk浏览器和X5内核浏览器都支持的播放模式。其原理为在遇到需要全屏播放视频的页面时，webkit会将播放视频的view传递给开发者，开发者将播放view替代webview即可。
+
+```
+WebChromeClient chromeClient = new WebChromeClient() {
+	View myVideoView;
+	View myNormalView;
+	CustomViewCallback callback;
+
+	@Override
+	public void onShowCustomView(View view, CustomViewCallback customViewCallback) {
+		View normalView = X5WebView.this;
+		ViewGroup viewGroup = (ViewGroup) normalView.getParent();
+		viewGroup.removeView(normalView);
+		viewGroup.addView(view);
+		myVideoView = view;
+		myNormalView = normalView;
+		callback = customViewCallback;
+	}
+
+	@Override
+	public void onHideCustomView() {
+		if (callback != null) {
+			callback.onCustomViewHidden();
+			callback = null;
+		}
+		if (myVideoView != null) {
+			ViewGroup viewGroup = (ViewGroup) myVideoView.getParent();
+			viewGroup.removeView(myVideoView);
+			viewGroup.addView(myNormalView);
+		}
+	}
+};
+this.setWebChromeClient(chromeClient);
+```
+
+### 4.3.2 X5内核
+
+X5浏览器支持三种播放视频的模式，分别是webkit播放模式与x5播放模式，x5播放模式是将视频文件跳转到一个特别的activity来单独播放，体验更好，速度也更流畅，推荐使用。但要注意的是，**x5播放模式需要WebView的Context必须为Activity类型**，我们试过在react-native中嵌套X5浏览器，传入webview的context是ReactContext，发现视频一直都是黑屏，坑爹呀。
+
+```
+<activity
+    android:name="com.tencent.smtt.sdk.VideoActivity"
+    android:alwaysRetainTaskState="true"
+    android:configChanges="orientation|screenSize|keyboardHidden"
+    android:exported="false"
+    android:launchMode="singleTask" >
+    <intent-filter>
+        <action android:name="com.tencent.smtt.tbs.video.PLAY" />
+        <category android:name="android.intent.category.DEFAULT" />
+    </intent-filter>
+</activity>
+```
+
+在AndroidManifest中加上这个activity
+
+```
+if(this.getX5WebViewExtension()!=null){
+    Bundle data = new Bundle();
+    data.putBoolean("standardFullScreen", false);//true表示标准全屏，false表示X5全屏；不设置默认false，
+    data.putBoolean("supportLiteWnd", false);//false：关闭小窗；true：开启小窗；不设置默认true，
+    data.putInt("DefaultVideoScreen", 2);//1：以页面内开始播放，2：以全屏开始播放；不设置默认：1
+    this.getX5WebViewExtension().invokeMiscMethod("setVideoParams", data);
+}
+```
+
+在webview加上以上配置，那么在遇到带有视频的网页时，点击播放按钮就会跳转到com.tencent.smtt.sdk.VideoActivity来全屏播放视频了，非常方便。
+
+## 4.4 对话框
+有时候，我们需要更改console,alert,confirm,prompt这几种原生的对话框样式，我们可以这么做。
+
+```
+WebChromeClient chromeClient = new WebChromeClient() {
+	@Override
+	public boolean onConsoleMessage(ConsoleMessage var1) {
+        return super.onConsoleMessage(var1);
+    }
+
+	@Override
+	public boolean onJsConfirm(WebView arg0, String arg1, String arg2, JsResult arg3) {
+		//TODO
+		return super.onJsConfirm(arg0, arg1, arg2, arg3);
+	}
+
+	@Override
+	public boolean onJsAlert(WebView arg0, String arg1, String arg2, JsResult arg3) {
+		//TODO
+		return super.onJsAlert(null, "www.baidu.com", "aa", arg3);
+	}
+
+	@Override
+	public boolean onJsPrompt(WebView arg0, String arg1, String arg2, String arg3, JsPromptResult arg4) {
+		//TODO
+		return super.onJsPrompt(arg0, arg1, arg2, arg3, arg4);
+	}
+};
+this.setWebChromeClient(chromeClient);
+```
+
+修改一下WebChromeClient里面的回调就可以了，挺简单的。
+
+## 4.5 缓存
+
+```
+webSetting.setAppCacheEnabled(true);
+webSetting.setDatabaseEnabled(true);
+webSetting.setDomStorageEnabled(true);
+webSetting.setAppCacheMaxSize(Long.MAX_VALUE);
+webSetting.setCacheMode(WebSettings.LOAD_NO_CACHE);
+```
+
+开启html5的各种缓存模式，database,appcache,以及domstorage，而cacheMode是用来配置http协议上的缓存。
+
+## 4.6 拦截请求
+
+### 4.6.1 页面加载
+
+```
+WebViewClient webviewClient = new WebViewClient() {
+    public void onPageFinished(WebView view, String url) {
+        //TODO
+    }
+
+    public void onPageStarted(WebView view, String url, Bitmap favicon) {
+        //TODO
+    }
+}
+this.setWebViewClient(webViewClient);
+
+WebChromeClient webChromeClient = new WebChromeClient() {
+    public void onProgressChanged(WebView var1, int var2) {
+    	//TODO
+    }
+}
+this.setWebChromeClient(webChromeClient);
+```
+
+webViewClient与webChromeClient中一起提供了页面开始加载，加载中，加载完成这三个事件，这也是大多数浏览器中实现顶部进度条的原理。
+
+### 4.6.2 页面内请求
+
+```
+WebViewClient webviewClient = new WebViewClient() {
+    public WebResourceResponse shouldInterceptRequest (WebView view,
+                                                       WebResourceRequest request) {
+        //TODO
+        return super.shouldInterceptRequest(view,request);
+    }
+
+    public WebResourceResponse shouldInterceptRequest(WebView view,
+                                                      String url) {
+        //TODO
+        return super.shouldInterceptRequest(view,url);
+    }
+}
+this.setWebViewClient(webViewClient);
+```
+
+拦截页面中的ajax，文件等各种各样的请求，也有被用来做webview通信的。
+
+### 4.6.3 页面外请求
+
+```
+WebViewClient webviewClient = new WebViewClient() {
+	/**
+	 * 防止加载网页时调起系统浏览器
+	 */
+	public boolean shouldOverrideUrlLoading(WebView view, String url) {
+		view.loadUrl(url);
+		return true;
+	}
+}
+this.setWebViewClient(webViewClient);
+```
+
+拦截页面中跳转到其他页面的请求，一般不做拦截的话，安卓浏览器中会弹出提示框，提示你是否跳转到系统浏览器中看这个页面。所以，要么是在重用本地的webview来加载新页面，要么是新开一个activity的webview来加载新页面，看业务了。
+
+### 4.6.4 新窗口请求
+
+```
+WebChromeClient webChromeClient = new WebChromeClient() {
+    public boolean onCreateWindow(WebView var1, boolean var2, boolean var3, Message var4) {
+        return super.onCreateWindow(var1,var2,var3,var4);
+    }
+}
+this.setWebChromeClient(webChromeClient);
+```
+
+拦截用javascript来启动新窗口的请求，这个一般是不拦截的，不允许javascript来开启新窗口。
+
+## 4.7 安全
+
+```
+this.getSettings().setAllowFileAccess(true); this.getSettings().setAllowFileAccessFromFileURLs(true); this.getSettings().setAllowUniversalAccessFromFileURLs(true);
+```
+
+设置file域名下页面的安全性，一般file域名是设置为无跨域的，简单暴力。
+
+# 5 启动
+
+## 5.1 loadUrl启动
+
+```
+webView.loadUrl("file:///android_asset/webpage/fullscreenVideo.html");
+webView.loadUrl("http://www.baidu.com");
+```
+
+要么是加载本地资源上的文件，要么是加载网络上的文件，都可以。
+
+## 5.2 loadData启动
+
+```
+view.loadDataWithBaseURL(view.getBaseUrl(), html, "text/html", view.getCharset(), null);
+```
+
+传入一段指定的html数据，让webview跑起来，这个还是比较简单的。
+
+```
+<!--错误演示-->
+<div>HelloWorld</div>
+<!--正确演示-->
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+	</head>
+	<body>
+		<div>HelloWorld</div>
+	</body>
+</html>
+```
+
+但是要注意的是，很多时候，我们是用这个loadData来展示富文本内容的，所以就直接将div扔进去loadData里面，这样会造成很多兼容性问题，所以，**请务必在富文本前后加上恰当的html内容后才扔进webview内部**。
+
+# 6 FAQ
+
+## 6.1 webview高度自适应
+
+```
+this.addJavascriptInterface(new Object(){
+	@JavascriptInterface
+    public void getContentHeight(double height){
+        //TODO height
+    }
+},"NativeAndroid");
+
+WebChromeClient webChromeClient = new WebChromeClient() {
+   	public void onPageFinished(WebView view, String url) {
+        view.loadUrl("javascript:(function() { " + "NativeAndroid.getContentHeight(document.documentElement.scrollHeight);" + "})();");
+    }
+}
+this.setWebChromeClient(webChromeClient);
+```
+
+有时候需要webview的高度自适应其内部内容的高度。目前并没有什么好办法，就是在onPageFinished后执行一段javascript代码，让页面的高度用javascriptInterface的方法传递到native端。
+
 
 
 
