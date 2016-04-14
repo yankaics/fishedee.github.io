@@ -477,6 +477,17 @@ this.setWebChromeClient(webChromeClient);
 
 有时候需要webview的高度自适应其内部内容的高度。目前并没有什么好办法，就是在onPageFinished后执行一段javascript代码，让页面的高度用javascriptInterface的方法传递到native端。
 
+## 6.2 视频在关闭后仍然播放
+
+```
+webView.getClass().getMethod("onPause").invoke(webView,(Object[])null);
+webView.getClass().getMethod("onResume").invoke(webView,(Object[])null);
+webView.removeAllViews()
+webView.destroy()
+```
+
+安卓自带的webview有很多问题，其中一个大bug，就是关闭webview后，仍然会有视频的声音放出。解决办法是将页面onResume与onPause时调用webview的onPause与onRusume，在页面的onDestroy时调用webview的removeAllViews与destroy来彻底关闭视频。
+
 
 
 
