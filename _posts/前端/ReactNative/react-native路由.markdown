@@ -1,3 +1,8 @@
+---
+layout: post
+category: 前端
+---
+
 # 1 概述
 react-native路由
 

@@ -1,0 +1,124 @@
+---
+layout: post
+category: 前端
+---
+
+# 1 概述
+ui中的异步与更新，我们探讨一个前端编程中常常会遇到的问题。
+
+# 2 问题
+
+```
+public void onCreate(){
+	mHandler.postDelayed(new Runnable() {
+		public void run() {
+			dostuff();
+	    }
+	}, 30000);
+}
+protected void dostuff() {
+	Intent intent = getIntent();
+	finish();
+	startActivity(intent);
+	Toast.makeText(getApplicationContext(), "refreshed", Toast.LENGTH_LONG).show();
+}
+```
+
+这是一段平凡得不行的安卓代码，出发点是想在30秒startActivity来跳转页面。但是发布在线上一看，偶尔会报出崩溃。为什么？因为还没到30s页面就被用户关闭了activity，这个activity已经被用户destroy了，但是30s后这段代码仍然执行，试图让一个已经destroy的activity来跳转，导致了崩溃。
+
+```
+React.createClass({
+	getInitialState(){
+		return {
+			name:"fish"
+		};
+	},
+	componentDidMount(){
+		setTimeout(()=>{
+			this.setState({
+				name:"timeout!",
+			});
+		},10)
+	},
+	render(){
+		return (<div>this.state.name</div>);
+	}
+})
+```
+
+同样的道理，在react-native中，企图在10s后进行setState，却发现这个component老早前已经被用户unmount了，也导致类似的崩溃。
+
+深入思考可以看出，这个问题是普遍存在于所有的ui编程中的。我们企图会在各种异步（定时器，网络请求，异步计算等等）后更新这个页面，却发现这个页面早已被用户关掉了，从而导致了页面崩溃。怎样优雅地解决这个，这是个问题。
+
+# 3 解决
+
+## 3.1 页面隔离
+在普通的web2.0开发中，页面在setTimeout后再进行某个操作，这种事情是最普通不过的，我们写了这么久怎么没有问题。很简单，因为浏览器是单个页面对应单个js环境的，当页面被用户关掉后，整个js环境是会被浏览器强制回收的，这时候setTimeout后的代码是不可能被执行的，更妄提setTimeout更新页面了。通过浏览器的页面隔离代码技术，当页面关闭后，属于该页面的ui代码就会被中断，从而解决这个问题。
+
+但是，如果我们的ui是最近的单页面架构，或者是安卓与iOS的原生开发环境，这种方法就不适合了，因为这些程序都是多个页面对应着同一份代码运行环境，页面间并没有隔离。
+
+## 3.2 异步后检查
+
+```
+React.createClass({
+	getInitialState(){
+		return {
+			name:"fish"
+		};
+	},
+	componentDidMount(){
+		setTimeout(()=>{
+			if( this.isMount() == false ){
+				return
+			}
+			this.setState({
+				name:"timeout!",
+			});
+		},10000)
+	},
+	render(){
+		return (<div>this.state.name</div>);
+	}
+})
+```
+
+另外一个更为简单直接的办法是，在每个异步的返回处进行检查，如果页面已经关闭了，则直接中断代码。这个办法是可以，不过改动太多了，因为每个与ui有关的异步都必须检查一下，实在蛋疼。
+
+## 3.3 中断异步
+
+```
+function wait(timeout){
+	return new Promise(function(resolve,reject){
+		setTimeout(resolve,timeout);
+	});
+}
+React.createClass({
+	getInitialState(){
+		return {
+			name:"fish"
+		};
+	},
+	componentDidMount(){
+		var self = this;
+		async function task(){
+			await wait(10000);
+			self.setState({
+				name:"timeout!",
+			});
+		}
+		this.runTask = task();
+	},
+	componentWillUnmount(){
+		this.runTask.cancel();
+	},
+	render(){
+		return (<div>this.state.name</div>);
+	}
+})
+```
+
+通过将异步操作promise化，然后在component被删除时，cancel对应的promise即可。这个办法可以解决深层嵌套异步的中断问题，而且能还能容易地嵌套在ui的框架层来实现，值得推荐。
+
+# 4 总结
+ui中的异步与中断，这是个出现比较多但也容易忽略的问题。如果有更好解决方法，也请告诉我噢
+
