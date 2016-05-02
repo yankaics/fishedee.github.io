@@ -1,0 +1,102 @@
+---
+layout: post
+category: 后端
+---
+
+# 1 概述
+golang编译提速优化
+
+# 2 go install减少编译
+
+```
+go build mymanager
+```
+
+平时情况下，我们对项目是这么编译的。它会将整个项目的每个包重新编译，然后链接成一个可执行文件。那么，即使改掉其中一个包的文件，也需要将所有的包重新编译一次，这样真的很慢好么。
+
+```
+go install mymanager
+```
+
+改用go install指令来编译，当项目的其中一个包编译后，其会将生成的.a文件放倒pkg文件夹下，最后将所有.a文件链接成一个可执行文件就好了。这相当于编译器在文件纬度对源码编译的结果做了缓存，当你只改掉其中一个包下的文件后，go install就会只编译这个包，然后将之前已编译好的包链接起来即可，这样就能大幅减少编译时间了。
+
+# 3 go indirect减少链接
+
+## 3.1 为什么链接会慢
+
+```
+package routers
+
+import (
+	"net/http"
+)
+
+type MM *http.Request
+```
+
+我们的代码中包含一段上面的这个代码，会发现上面的一行代码会导致生成的routers.a文件高达110k。
+
+```
+package routers
+        import http "net/http"
+        import url "net/url" // indirect
+        type @"net/url".Userinfo struct { @"net/url".username string; @"net/url".password string; @"net/url".passwordSet bool }
+        func (@"net/url".uÂ·3 *@"net/url".Userinfo "esc:0x22") Password () (? string, ? bool) { if @"net/url".uÂ·3.@"net/url".passwordSet { return @"net/url".uÂ·3.@"net/url".password, bool(true) }; return string(""), bool(false) }
+        func (@"net/url".uÂ·2 *@"net/url".Userinfo "esc:0x22") String () (? string)
+```
+
+打开routers.a文件，发现里面会被indirect了一大堆第三方的包，net/url，reflect包等等。由于.a文件的大幅膨胀，直接导致了链接的速度超级慢。
+
+## 3.2 为什么会有indirect包
+什么时候会触发indirect包导入？明明我只导入了一个http的包呀，为什么golang会在.a文件上帮我indirect了net/url这些包呢，经过多次实践和试验后发现，这个问题的关键是在于导出包的对象
+
+```
+package routers
+
+import (
+	"net/http"
+)
+```
+
+例如，该包已经包含了一个net/http包
+
+```
+var a *http.Request
+type b *http.Request
+```
+
+而代码如果是以上a或b的情况，则都不会促进该包的代码膨胀
+
+```
+var A *http.Request
+type B *http.Request
+type C struct{
+}
+func (this *C) doSomething()*http.Request{
+}
+```
+
+而代码如果是以上a，b或c的情况，则都会促进该包的代码膨胀，会直接导致http的包所有接口导入到该包上，导致代码严重膨胀，编译的链接效率超低。
+
+原因，.a包的目的有两个，声明该包的导入符号，这个在编译.a包就能确定下来，需要的代码膨胀并不会大幅提高，golang能做到按需导入。而声明该包的导出符号，由于在编译.a包时并不能确定调用方需要多少导出的符号，所以，该包的导出变量，类型，方法等等都会全部写入到.a包的导出符号上，而这些导出符号如果依赖其它包的话，这些其它包就会indirect地包含进来。当然，golang在导出符号处理时也是比较智能的，只处理那些**导出符号**的所依赖indirect信息，而不是**导出符号所在包**的所依赖的indirect信息
+
+## 3.3 解决
+根据上面的讨论可以得知，减少链接时间的关键就在于，控制导出符号的变量，类型与方法。如果这些符号都是基本类型，如string,int,interface{}等等，则生成出来的.a包就小，如果这些符号是依赖于第三方的，则生成出来的.a包甚至会包含第三方的所有导出符号，导致链接时间大幅提高。
+
+```
+net/http 61k 1.36s
+net/url 7.7k 0.69s
+beego 112k 2s
+xorm 128k 2s
+```
+
+附上常见的第三方包的链接时间
+
+# 4 总结
+使用了上面的方法，我们一个大概10w行的代码库，每次改一个文件的重新编译时间
+
+* go install优化，从3min降低到15s。
+* go indirect优化，从15s降低到3s。
+
+基本达到了热编译的效果，大幅提高了开发人员调试golang代码的效率，爽。
+
