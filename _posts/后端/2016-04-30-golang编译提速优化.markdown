@@ -6,23 +6,67 @@ category: 后端
 # 1 概述
 golang编译提速优化
 
-# 2 go install减少编译
+# 2 程序员的自我修养
+
+![](/assets/img/14625830516352.jpg)
+
+大家还记得周星驰的自我修养么？
+
+![](/assets/img/14625830995922.jpg)
+
+其实程序员界也有一本自我修养，关于编译的整个过程，也许大家动态语言用多了，或者IDE用多了，关于一个源文件最后是怎么变成一个可执行文件的过程，可能并不是太熟悉。
+
+![](/assets/img/14625859864551.jpg)
+
+这是c++中编译单个文件的流程
+
+# 3 go build
+
+![](/assets/img/14625853667537.jpg)
+
 
 ```
-go build mymanager
+go build server2
 ```
 
 平时情况下，我们对项目是这么编译的。它会将整个项目的每个包重新编译，然后链接成一个可执行文件。那么，即使改掉其中一个包的文件，也需要将所有的包重新编译一次，这样真的很慢好么。
+
+
+# 4 go install减少编译
+
+![](/assets/img/14625852503804.jpg)
 
 ```
 go install mymanager
 ```
 
-改用go install指令来编译，当项目的其中一个包编译后，其会将生成的.a文件放倒pkg文件夹下，最后将所有.a文件链接成一个可执行文件就好了。这相当于编译器在文件纬度对源码编译的结果做了缓存，当你只改掉其中一个包下的文件后，go install就会只编译这个包，然后将之前已编译好的包链接起来即可，这样就能大幅减少编译时间了。
+改用go install指令来编译，当项目的其中一个包编译后，其会将生成的.a文件放倒pkg文件夹下，最后将所有.a文件链接成一个可执行文件就好了。这相当于编译器在文件纬度对源码编译的结果做了缓存，当你只改掉其中一个包下的文件后，go install就会只编译这个包，然后将之前已编译好的包链接起来即可，这样就能大幅减少编译时间了。go install相当于增量编译了。
 
-# 3 go indirect减少链接
+![](/assets/img/14625996198103.jpg)
 
-## 3.1 为什么链接会慢
+那么go怎么知道哪些文件是需要重新编译，哪些文件是不需要重新编译的呢？答案是，文件的修改时间！
+
+```
+package main
+
+import (
+	"package1"
+	"package2"
+	"package2"
+)
+
+func main(){
+	//xxxxxx
+}
+```
+
+例如，入口包包含了这三个包文件。go install时会从main.go中读取到这三个包，然后到这三个依赖的包去找package1.a与package1的源代码。如果package3.a的更新时间比package3.go的时间要新，就去重新编译package3.a，否则就不重新编译package3.a。同时，由于package2.a依赖了package3.a，那么即使package3.a的更新时间比package3.go的时间要新，也要重新编译package2.a，那是因为依赖的package3包更新了。最后是package2.a与package3.a重新编译后，重新生成执行文件即可。
+
+总结，一个包是否重新编译在两点，该包的源文件是否更新了，该包的依赖包是否更新了？
+
+# 5 go indirect减少链接
+
+## 5.1 为什么链接会慢
 
 ```
 package routers
@@ -47,7 +91,7 @@ package routers
 
 打开routers.a文件，发现里面会被indirect了一大堆第三方的包，net/url，reflect包等等。由于.a文件的大幅膨胀，直接导致了链接的速度超级慢。
 
-## 3.2 为什么会有indirect包
+## 5.2 为什么会有indirect包
 什么时候会触发indirect包导入？明明我只导入了一个http的包呀，为什么golang会在.a文件上帮我indirect了net/url这些包呢，经过多次实践和试验后发现，这个问题的关键是在于导出包的对象
 
 ```
@@ -80,7 +124,7 @@ func (this *C) doSomething()*http.Request{
 
 原因，.a包的目的有两个，声明该包的导入符号，这个在编译.a包就能确定下来，需要的代码膨胀并不会大幅提高，golang能做到按需导入。而声明该包的导出符号，由于在编译.a包时并不能确定调用方需要多少导出的符号，所以，该包的导出变量，类型，方法等等都会全部写入到.a包的导出符号上，而这些导出符号如果依赖其它包的话，这些其它包就会indirect地包含进来。当然，golang在导出符号处理时也是比较智能的，只处理那些**导出符号**的所依赖indirect信息，而不是**导出符号所在包**的所依赖的indirect信息
 
-## 3.3 解决
+## 5.3 解决
 根据上面的讨论可以得知，减少链接时间的关键就在于，控制导出符号的变量，类型与方法。如果这些符号都是基本类型，如string,int,interface{}等等，则生成出来的.a包就小，如果这些符号是依赖于第三方的，则生成出来的.a包甚至会包含第三方的所有导出符号，导致链接时间大幅提高。
 
 ```
@@ -92,11 +136,115 @@ xorm 128k 2s
 
 附上常见的第三方包的链接时间
 
-# 4 总结
+```
+fish@iZ2820y71jjZ:~/Project/fishgo$ time go install -v server2
+server2/models/cms/content
+server2/models/cms/activity
+server2/models/remain/brush
+server2/models/cms/question
+server2/models/remain/invite
+server2/models/remain/point
+server2/models/cms/dish
+server2/models/remain/remind
+server2/controllers
+server2/routers
+server2
+
+real	0m20.558s
+user	0m18.835s
+sys	0m1.137s
+```
+
+这是优化前的修改content文件的重编译时间20s
+
+```
+fish@iZ2820y71jjZ:~/Project/fishgo$ time go install -v server2
+server2/models/cms/content
+server2/models/cms/question
+server2/models/remain/invite
+server2/models/remain/point
+server2/models/cms/activity
+server2/models/cms/dish
+server2/models/remain/remind
+server2/controllers
+server2/routers
+server2
+
+real	0m12.463s
+user	0m11.282s
+sys	0m0.727s
+```
+
+这是优化后的修改content文件的重编译时间12s
+
+# 6 touch 减少依赖编译
+
+```
+//$GOPATH/gotest/main.go
+package main
+
+import (
+    "gotest/util"
+)
+
+func main() {
+    util.Do()
+}
+```
+
+main.go
+
+```
+//$GOPATH/gotest/util/util.go
+package util
+
+import (
+    "gotest/util2"
+)
+
+func Do() {
+    a := util2.GetMM()
+    a.Do()
+}
+```
+
+util.go
+
+```
+//$GOPATH/gotest/util2/util2.go
+package util2
+
+import (
+    "fmt"
+)
+
+type MM interface {
+    Do()
+}
+
+type mmInpement struct {
+}
+
+func (this *mmInpement) Do() {
+    fmt.Println("uu4")
+}
+
+func GetMM() MM {
+    return &mmInpement{}
+}
+```
+
+util2.go
+
+![](/assets/img/14626006784829.jpg)
+
+很明显，当util2的代码发生变更时，util包会重新编译，最后main.go也会重新编译。但是，util2只是实现发生变化，而不是接口发生变化时，util包是不需要重新编译的。但目前golang编译中没有对这一步进行智能化的判断，导致我们只是改contentao实现而不改接口时，所以依赖contentao的代码都会重新编译，导致了严重的编译时间。这个[问题](https://github.com/golang/go/issues/15569)已经提交到golang的issue，他们仍然在考虑当中，主要是担心会忽略编译。幸好的是，这个问题我们可以通过touch来强制让golang忽略util来达成免除util重编译的效果。我也在实现这个[工具](https://github.com/fishedee/fishgo/tree/master/src/github.com/fishedee/web/fishcmd)中，再看看出来的效果怎么样了。
+
+# 7 总结
 使用了上面的方法，我们一个大概10w行的代码库，每次改一个文件的重新编译时间
 
-* go install优化，从3min降低到15s。
-* go indirect优化，从15s降低到3s。
+* go install优化，从3min降低到20s。
+* go indirect优化，从20s降低到12s。
 
 基本达到了热编译的效果，大幅提高了开发人员调试golang代码的效率，爽。
 
