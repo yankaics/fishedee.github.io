@@ -1,0 +1,171 @@
+---
+layout: post
+category: 后端
+---
+
+# 1 概述
+优化性能，程序员看到了这个词就像巴甫洛夫的狗听到了铃铛一样，流起了口水。开发者的莫大自豪感的其中一个来源是来自于我的程序比别人快多了。
+
+![](/assets/img/14631172968879.jpg)
+
+有听过着Donald E. Knuth写的计算机程序设计艺术么，他写的这套书主要讲述算法与数据结构，对编译器，排序算法等做出了重大的贡献。
+
+![](/assets/img/14631175483176.jpg)
+
+这老头子写了两卷后，图灵奖委员会就迫不及待地把图灵奖颁给了他。然后，这本书的后续到现在也还没有写完。。。简单来说，就是如果你写的代码速度比他更快，那你可以拿图灵奖了。
+
+> 过早的优化是万恶之源
+
+可是，这个全世界最讲求性能的程序猿，他说过的一句话是：
+
+# 2 瓶颈在哪里？
+
+## 2.1 性能分析工具
+计算方法：生成a,b两个在0到r之间的随机数，数一数这些数字里面有多少个落在了半径为r的1/4圆的扇形里面，用这个数字代表扇形面积，用总随机数数量代表正方形面积。因为扇形的面积是![](/assets/img/14631192691473.jpg),而正方形的面积是![](/assets/img/14631192783638.jpg), 可得知![](/assets/img/14631192855958.jpg)=扇形面积/正方形面积 * 4.（蒙地卡羅方法）
+
+```
+#include "stdafx.h"
+#include <iostream>
+#include <time.h>
+
+using namespace std;
+
+void main()
+{
+	double st = clock();
+	double rand_max = 32767;
+	srand((int)time(0));
+	unsigned int simulate_total = 2500000;
+	unsigned int inside_count = 0;
+	unsigned int radius = rand_max * rand_max;
+
+	unsigned int randA;
+	unsigned int randB;
+
+	unsigned int randA_opp;
+	unsigned int randB_opp;
+
+	for (unsigned int i = 1; i < simulate_total; i++){
+		randA = rand();
+		randB = rand();
+
+		if ((randA * randA + randB * randB) < radius){
+			inside_count++;
+		}
+		randA_opp = rand_max - randA;
+		randB_opp = rand_max - randB;
+		if ((randA_opp * randA_opp + randB_opp * randB_opp) < radius){
+			inside_count++;
+		}	
+	}
+
+	cout << inside_count / double(simulate_total) * 2 << endl;
+	cout << clock() - st << endl;
+}
+```
+
+[知乎](https://www.zhihu.com/question/27768721)的朋友在用蒙地卡羅方法计算pi值时，发现C++仅仅比VB快4倍。C++为208ms,VB为832ms，如果是你，你会怎么解决？马上用汇编重写一遍么？
+
+![](/assets/img/14631194206825.jpg)
+
+我们可以看到，rand()占用了56.3%的时间，是性能的瓶颈。此外，整数的减法也占用了33.4%的时间。知道了原因以后就好办了。第一步，放狗搜索c++ slow rand。出来一大坨结果。其中一个是Need a fast random generator for c++，里面提供了一个快速的rand()实现。把代码粘进去。
+
+```
+unsigned int g_seed = 0;
+unsigned int fastrand() {
+	g_seed = (214013 * g_seed + 2531011);
+	return (g_seed >> 16) & 0x7FFF;
+}
+```
+
+瞬间提速1倍到了99ms，结果不变
+
+![](/assets/img/14631197237497.jpg)
+
+一个诡异的地方是这是个整数运算应该极其快，而且不应该有类型转换在里面。但是profiler说50%的时间都在float到long的类型转换上面（注意图片右上角）。进一步检查发现，rand_max怎么是double。改成int，结果不变，时间变成43ms，进一步提速2倍。
+
+至此，优化从208ms提速到43ms，几乎为VB版本的19倍，优化结束。
+
+## 2.2 替换模块
+有次闲着蛋疼，测试一下我们的php旧框架和go的新框架，性能会有多大的差距。发现执行一条select * from t_user的sql操作，php是250 request/s，而go是500 request/s。go的版本仅仅比php快2倍的处理性能。这时候，你会怎么办呢，马上上缓存实现么？
+
+![Screen Shot 2016-05-13 at 2.25.54 P](/assets/img/Screen%20Shot%202016-05-13%20at%202.25.54%20PM.png)
+
+php版本
+
+![Screen Shot 2016-05-13 at 2.24.39 P](/assets/img/Screen%20Shot%202016-05-13%20at%202.24.39%20PM.png)
+
+go版本
+
+当时没有用性能分析工具，我将这条sql语句从xorm引擎更改为mysql的原生database的实现。
+
+![Screen Shot 2016-05-13 at 2.31.25 P](/assets/img/Screen%20Shot%202016-05-13%20at%202.31.25%20PM.png)
+
+当时性能马上从500飙升到1600，发现sql操作慢的这个锅，不应该是由go来背，而是xorm引擎的问题。那么，是不是xorm引擎中间隔绝了一层，导致sql操作特别慢呢，我们以后还要不要用orm引擎，这时候，我将orm引擎从xorm切换到gorm。
+
+![Screen Shot 2016-05-13 at 2.35.58 P](/assets/img/Screen%20Shot%202016-05-13%20at%202.35.58%20PM.png)
+
+发现同是orm引擎，gorm基本没有性能损耗。看来这个实打实的xorm来背。
+
+![](/assets/img/14631215323064.png)
+
+这时候我看了源代码，发现xorm明明是一条sql执行操作，都会分解成doPrepare与Query两条，导致性能降低了。将这里改过来后，速度与gorm已经不相上下了。发现这个问题后，我跟xorm提了[issue](https://github.com/go-xorm/xorm/issues/326)，作者大大很给力地迅速修复了问题。
+
+就这样，我们在一行业务代码未改，仅仅更新了xorm库后，性能发展为原来的3倍，php的7倍。
+
+# 3 优化的上限
+作为一个后台开发者，每个常用的优化技术，他们的性能差距有多大，是需要心里有底的。
+
+## 3.1 sql索引
+
+![](/assets/img/14631229172099.png)
+
+千万级数据量时，sql不走索引
+
+![](/assets/img/14631229361378.png)
+
+千万级数据量时，sql走索引
+
+## 3.2 缓存
+
+![](/assets/img/14631232205827.jpg)
+
+sql走索引，无缓存
+
+![Screen Shot 2016-05-13 at 3.07.18 P](/assets/img/Screen%20Shot%202016-05-13%20at%203.07.18%20PM.png)
+
+sql走索引，有缓存
+
+## 3.3 排序
+
+```
+
+```
+
+```
+
+```
+
+## 3.4 估算
+假设每个api请求由10个sql请求组成的，那么不同的sql处理速度能撑起多大的网站。以下数据是基于单核的处理情况下。双核的情况下大概可以乘以1.8～2的倍数。
+
+api峰值处理速度 = sql峰值处理速度/10
+api日常处理速度 = api峰值处理速度/2
+网站PV = api日常处理速度 * 3600s * 12h
+
+|sql峰值处理速度|api峰值处理速度|api日常处理速度|网站PV|
+|:--|:--|:--|:--|
+|1 req/s|0.1 req/s|0.05 req/s|0.216w|
+|200 req/s|20 req/s|10 req/s|42w|
+|500 req/s|50 req/s|25 req/s|108w|
+|1500 req/s|150 req/s|75 req/s|324w|
+
+# 4 总结
+记住，过早优化是罪恶的根源。
+
+* 优化前需要考虑好优化的瓶颈在哪里，可以用性能分析工具，也可以用模块替换的办法
+* 优化前需要考虑这种优化效果带来的收益有多少，付出的代价有多少，是不是值得这么做。
+
+请不要在没有证据的情况下开始优化。
+
+

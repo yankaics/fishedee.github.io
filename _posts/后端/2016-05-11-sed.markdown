@@ -1,0 +1,20 @@
+# 1 概述
+sed的用法
+
+# 2 大小写转换
+
+find . | grep "\.go" | xargs gsed -i 's/type \([a-zA-Z]\)\([a-zA-Z]*\)Model struct/type \L\1\E\2Model struct/g'
+
+find . | grep "\.go" | xargs gsed -i 's/this \*\([a-zA-Z]\)\([a-zA-Z]*\)Model/this \*\L\1\E\2Model/g'
+
+find . | grep "\.go" | xargs gsed -i 's/type \([a-zA-Z]\)\([a-zA-Z]*\)Test struct/type \L\1\E\2Test struct/g'
+
+find . | grep "\.go" | xargs gsed -i 's/this \*\([a-zA-Z]\)\([a-zA-Z]*\)Test/this \*\L\1\E\2Test/g'
+
+find . | grep "\.go" | xargs gsed -i 's/type \([a-zA-Z]\)\([a-zA-Z]*\)Controller struct/type \L\1\E\2Controller struct/g'
+
+find . | grep "\.go" | xargs gsed -i 's/this \*\([a-zA-Z]\)\([a-zA-Z]*\)Controller/this \*\L\1\E\2Controller/g'
+
+redis队列的数据无接收者时会堆积
+热重启的功能
+
