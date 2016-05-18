@@ -1,0 +1,59 @@
+# 1 概述
+业务模块划分，这是个说起来简单但是又很复杂的问题。
+
+# 2 原则
+
+* 高内聚，低耦合
+* keep it simple
+* design for failure
+
+为可维护性而努力，而不是便利性。
+
+# 3 经验
+
+## 3.1 接口正交
+
+如果是可能公开的需要长期维护的接口，形式要尽量简单、参数要尽量少、接口数量也要尽可能少，互相在功能上没有重叠，按照书上的称呼这叫正交。只有这样才能保证未来的接口升级对旧版接口用户的影响尽可能的小。
+
+* 分页接口要单独为一个接口，不要和其他接口合并在一起
+* 批量接口是性能的关键
+
+## 3.2 单向依赖
+队列与接耦
+
+## 3.3 接口名称
+接口名称有一个约定成俗的规则，举例
+
+问题模块QuestionAo
+
+增删改查问题
+
+|功能|名字|参数|
+|:--|:--|:--|
+|搜索问题|Search|(where,limit)|
+|添加问题|Add|(questionData)|
+|删除问题|Del|(questionId)|
+|修改问题|Mod|(questionId,questionData)|
+|获取问题|Get|(questionId)|
+|批量获取问题|GetBatch|(questionIds)|
+
+增删改查问题下的答案信息
+
+|功能|名字|参数|
+|:--|:--|:--|
+|搜索答案|SearchAnswer|(where,limit)|
+|添加答案|AddAnswer|(data)|
+|删除答案|DelAnswer|(answerId)|
+|修改答案|ModAnswer|(answerId,answerData)|
+|获取答案|GetAnswer|(answerId)|
+|批量获取答案|GetBatchAnswer|(answerIds)|
+
+部分情况下，我们需要用非主键获取或修改信息的
+
+|功能|名字|参数|
+|:--|:--|:--|
+|获取单个问题下的答案|GetAnswerByQuestionId|(questionId,limit)|
+|获取多个问题下的答案|GetAnswerByQuestionIds|(questionIds,limit)|
+|删除单个问题下的所有答案|DelAnswerByQuestionId|(questionId)|
+
+
