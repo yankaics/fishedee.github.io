@@ -57,6 +57,8 @@ category: 后端
 
 |功能|名字|参数|
 |:--|:--|:--|
+|获取单个用户的问题|GetByClientId|(clientId)|
+|获取多个用户的问题|GetByClientIds|(clientIds)|
 |获取单个问题下的答案|GetAnswerByQuestionId|(questionId,limit)|
 |获取多个问题下的答案|GetAnswerByQuestionIds|(questionIds,limit)|
 |删除单个问题下的所有答案|DelAnswerByQuestionId|(questionId)|
