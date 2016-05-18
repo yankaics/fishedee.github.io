@@ -14,19 +14,24 @@ category: 后端
 
 为可维护性而努力，而不是便利性。
 
-# 3 经验
+# 3 高内聚，低耦合
 
-## 3.1 接口正交
+## 3.1 领域编程
+面向领域编程，而不是面向数据库编程
+
+## 3.2 单向依赖
+队列与解耦
+
+# 4 Keep it simple
+
+## 4.1 接口正交
 
 如果是可能公开的需要长期维护的接口，形式要尽量简单、参数要尽量少、接口数量也要尽可能少，互相在功能上没有重叠，按照书上的称呼这叫正交。只有这样才能保证未来的接口升级对旧版接口用户的影响尽可能的小。
 
 * 分页接口要单独为一个接口，不要和其他接口合并在一起
 * 批量接口是性能的关键
 
-## 3.2 单向依赖
-队列与接耦
-
-## 3.3 接口名称
+## 4.2 接口名称
 接口名称有一个约定成俗的规则，举例
 
 问题模块QuestionAo
@@ -61,6 +66,96 @@ category: 后端
 |获取多个用户的问题|GetByClientIds|(clientIds)|
 |获取单个问题下的答案|GetAnswerByQuestionId|(questionId,limit)|
 |获取多个问题下的答案|GetAnswerByQuestionIds|(questionIds,limit)|
+|获取单个问题下的答案数|GetAnswerNumByQuestionId|(questionId,limit)|
+|获取多个问题下的答案数|GetAnswerNumByQuestionIds|(questionIds,limit)|
 |删除单个问题下的所有答案|DelAnswerByQuestionId|(questionId)|
+
+尽可能将修改变为一个动作，而不是直接的setState
+
+|功能|名字|参数|
+|:--|:--|:--|
+|支持答案|LikeAnswer|(answerId,clientId)|
+|反对答案|HateAnswer|(answerId,clientId)|
+|评论答案|CommentAnswer|(answerId,clientId,text)|
+
+# 4 Design for failure
+错误是每时每刻都会发生的，必须要检查。如果发生错误时，必须中断操作，不往下继续，避免发生严重的数据不一致问题。
+
+## 4.1 为什么错误是普遍的
+假设，我们系统依赖有15个外部系统，每个外部系统的每天正常运行率是99%,也就是大概99天崩溃一次的概率。那么我们系统每天碰到的外部系统正常运行率为
+
+```
+99%^15=86％
+```
+
+而一个合格的系统，每天的正常运行率应该是99%以上，但由于依赖了15个外部系统，整体正常运行率就会被直接拖低到86%。
+
+另外，前端输入参数传入的是contentId是个undefined数据，用户未登录却企图点赞，数据库数据被意外串改为不合法的值，这些事情每天都在发生。
+
+> 错误是普遍的
+
+## 4.2 检查错误
+发生错误不是问题，问题是发生错误时，如果我们逻辑还继续进行，这个错误就会不断扩散到整个系统上，这时候很大一部分的数据都不一致了，想修复数据只能回滚了昨天了。所以，错误必须检查，如果发生了就必须中断逻辑。而软件中，因为错误而中断逻辑，它的名字叫异常。
+
+```
+//输入
+data := struct {
+	Url     string
+	Plaform string
+}{}
+this.CheckGet(&data)
+```
+
+输入要做校验
+
+```
+//检查权限
+this.UserLoginAo.CheckMustLogin()
+```
+
+登录态要做校验，而不是取传入的userId
+
+```
+sess, err := this.Session.SessionStart()
+if err != nil {
+	panic("session启动失败")
+}
+defer sess.SessionRelease()
+```
+
+外部依赖的redis,db操作失败时要panic
+
+## 4.3 监控错误
+当系统性错误出现时，除了中断逻辑外，接口返回500错误外，框架还需要自动打日志，记录问题发生的堆栈信息，记录错误的现场信息，并将问题以短信或邮件的方式及时反馈给开发者。方便开发者及时发现问题与修复问题。
+
+而业务性错误出现时，则简单地返回异常信息即可，不需要报警。
+
+## 4.4 容纳错误
+还记得，过年时微信抢红包，由于流量巨大，微信的朋友圈看视频都会提示“暂不能使用微信视频”么。由于红包是过年抢红包主要的业务，视频占有的资源很多，但相对红包并不重要。所以，通过优雅降级部分业务，来保证主要业务的顺利运行。
+
+例如，用户在查看食谱信息时，有两个步骤
+
+* 获取食谱信息
+* 记录食谱的浏览数
+
+很明显，“获取食谱信息”是主逻辑，“记录食谱的浏览数”是旁路逻辑。如果“记录食谱的浏览数”这一步崩溃了，我们系统仍然可以安全地对外服务，返回200返回码以及食谱信息，而不是整个接口一起返回500了，只是后台中的记录数据变得不太可靠而已。容纳错误，优雅降级，能让系统变得更可靠更健壮。
+
+```
+//原代码
+func (this *RecipeController) Get_Json()interface{}{
+	this.RecipeAo.Visit(contentId)
+	
+	return this.RecipeAo.Get(contentId)
+}
+
+//容错代码
+func (this *RecipeController) Get_Json()interface{}{
+	this.RecipeAo.Visit_WithException(contentId)
+	
+	return this.RecipeAo.Get(contentId)
+}
+```
+
+代码更改如上
 
 
