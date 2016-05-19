@@ -57,9 +57,20 @@ su
 apk文件的本质是个zip包，将apk的后缀更改为zip，然后双击解压就能看到apk里面的数据了。
 
 ## 3.2 dex2jar
+
+![Screen Shot 2016-05-19 at 3.17.19 P](/assets/img/Screen%20Shot%202016-05-19%20at%203.17.19%20PM.png)
+
+```
+➜  comhongbeibangapp ~/Desktop/dex2jar-2.0/d2j-dex2jar.sh classes.dex
+dex2jar classes.dex -> ./classes-dex2jar.jar
+```
+
 解压apk后，我们会看到一个class.dex文件，这个是存放所有java源代码的，由于android运行时本质还是个java环境，所以我们可以将dex文件直接转换为jar文件，这时候dex2jar就上场了。
 
 ## 3.3 jd-gui
+
+![Screen Shot 2016-05-19 at 3.25.27 P](/assets/img/Screen%20Shot%202016-05-19%20at%203.25.27%20PM.png)
+
 获取了jar包后，问题就容易了，用jd-gui直接打开jar包就能看到java源代码了，在这里可以看一下gradle生成的代码有没有问题。
 
 
