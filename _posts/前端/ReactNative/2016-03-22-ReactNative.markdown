@@ -112,4 +112,11 @@ project.afterEvaluate {
 
 安卓提示index.android.js找不到，这是个[bug](https://github.com/facebook/react-native/issues/5174)，解决方法是修改一下index.android.js，保存一下，再回滚，再保存，反正就是刷新一下入口文件就对了。
 
+## 2.3 读取filebundle文件图片无法显示
+在升级到React-Native的18.0+版本后，我们读取的js文件是从手机磁盘上读取的，而不是apk上的assets文件夹，但是这样会导致local image都无法显示了。调试了很久后，才发现，React-Native 18.0+以后规定，local image的查找路径是与index.android.js的文件位置为相对位置的。
+
+例如，如果index.android.js来源于apk上的assets，那么local image就是与assets路径为相对路径查找。如果index.android.js来源于磁盘上的/data/data/xxx/files目录，那么local image就是与/data/data/xxx/files路径为相对路径查找。
+
+那么知道问题后就很简单了，程序启动后，同步apk上的图片文件到磁盘上就好了。例如，如果index.android.js在/data/data/packages/files目录下，那么图片文件应该在/data/data/packages/files/drawable-mdpi，data/data/packages/files/drawable-xhdpi，data/data/packages/files/drawable-xxhdpi这几个文件夹下。
+
 

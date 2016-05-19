@@ -1,0 +1,65 @@
+---
+layout: post
+category: 前端
+---
+
+# 1 概述
+安卓调试技巧
+
+# 2 adb
+
+## 2.1 logcat
+
+```
+adb logcat 
+//直接查看日志
+adb logcat | grep xxx
+//查看并过虑指定日志
+```
+
+logcat能很好地调试出apk启动后崩溃，运行时崩溃等各种问题。
+
+## 2.2 shell
+
+```
+adb shell 
+run-as com.hongbeibang.app
+cd /data/data/com.hongbeibang.app/
+ls
+```
+
+shell能直接远程登录手机上的控制台，在上面做命令行的工作，能很好地调试出安卓数据写入是否正确。能使用run-as来启动com.hongbeibang.app，那么，com.hongbeibang.app包里面必须要先指定debuggable = true，不然会失败。
+
+```
+adb push [local-file] [remote-file]
+adb pull [remote-file] [local-file]
+```
+
+push与pull用来同步安卓与PC上的数据文件
+
+```
+adb root
+//指定adb以root权限启动
+adb shell
+su
+//shell提权到root用户
+```
+
+手机root以后，adb的权限就放开了，可以在上面安装各种调试工具。
+
+# 3 反编译工具
+有时候我们需要看看gradle的打包脚本有没有问题，经常用来调试ClassNotFoundException的错误。
+
+## 3.1 unzip
+
+![Screen Shot 2016-05-19 at 10.18.07 A](/assets/img/Screen%20Shot%202016-05-19%20at%2010.18.07%20AM.png)
+
+apk文件的本质是个zip包，将apk的后缀更改为zip，然后双击解压就能看到apk里面的数据了。
+
+## 3.2 dex2jar
+解压apk后，我们会看到一个class.dex文件，这个是存放所有java源代码的，由于android运行时本质还是个java环境，所以我们可以将dex文件直接转换为jar文件，这时候dex2jar就上场了。
+
+## 3.3 jd-gui
+获取了jar包后，问题就容易了，用jd-gui直接打开jar包就能看到java源代码了，在这里可以看一下gradle生成的代码有没有问题。
+
+
