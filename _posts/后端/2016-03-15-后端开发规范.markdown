@@ -3,43 +3,140 @@ layout: post
 category: 后端
 ---
 
-# 1.概述后端开发规范
-# 2.问题在整整一年的php开发过程中，我们发现了以下问题：
+# 1 概述后端开发规范
+# 2 问题在整整一年的php开发过程中，我们发现了以下问题：
 1. php的语法过于松散，容易写出难以理解而且不规范代码（同一个函数的返回类型可能是多个的）2. php遇上重IO任务时容易导致全站卡顿（七牛挂机，刷点赞数据中的等待，爬虫与同步操作）3. php的动态类型特性在运行时容易出现莫名奇妙的问题（controller校验不仔细，导致错误直达到model层）新框架是该换为beego的go框架来开发，针对性解决问题
-1. 严格的缩进进制和括号标准，不规范的代码不能通过编译，提升代码可读性2. go是强类型的语法，大部分问题在编译时已经被编译器发现，提升代码健壮性3. go是轻量级线程语法，为web开发而生，执行IO任务时会自动让出CPU控制权，从而提升代码性能。站在巨人的肩膀上，我们的新框架是在beego框架上添加插件达成的。# 3.组件
-## 3.1.路由![](/assets/img/14580513120147.jpg)
-
+1. 严格的缩进进制和括号标准，不规范的代码不能通过编译，提升代码可读性2. go是强类型的语法，大部分问题在编译时已经被编译器发现，提升代码健壮性3. go是轻量级线程语法，为web开发而生，执行IO任务时会自动让出CPU控制权，从而提升代码性能。站在巨人的肩膀上，我们的新框架是在beego插件上组合而成的。
+# 3 组件
+## 3.1 路由
+![Screen Shot 2016-05-19 at 1.47.46 P](/assets/img/Screen%20Shot%202016-05-19%20at%201.47.46%20PM.png)
 固定一个控制器写一个InitRoute，路由会自动将控制器的方法映射出去的。
-## 3.2.控制器![](/assets/img/14580513175169.jpg)
+## 3.2 控制器![Screen Shot 2016-05-19 at 2.12.53 P](/assets/img/Screen%20Shot%202016-05-19%20at%202.12.53%20PM.png)
 控制器的写法略为蛋疼，名字后面加上view名字来定义一个controller的方法
-### 3.2.1.命名Controrller的类均是以Controller结尾的单词，例如ClientController，ClassifyController等等### 3.2.2.声明所有的Controller均应继承自beego_validate_controller，或者是beego_validate_controller的子类，才能正常使用到我们的自动路由功能。
-### 3.2.3.方法beego_validate_controller会新增三个有用的方法，分别是CheckGet（校验Get参数）CheckPost（校验Post参数）AutoRender（将controller输出自动引导到view层输出）而beego_validate_controller继承自beego.Controller，所以beego.Controller有的方法他都会有## 3.3.模型![](/assets/img/14580513283378.jpg)
+### 3.2.1 命名Controrller的类均是以Controller结尾的单词，例如ClientController，ClassifyController等等### 3.2.2 声明所有的Controller均应继承自web.Controller，或者是web.Controller的子类，才能正常使用到我们的自动路由功能。
+### 3.2.3 方法web.Controller会新增三个常用的方法，分别是CheckGet（校验Get参数）CheckPost（校验Post参数）AutoRender（将controller输出自动引导到view层输出）## 3.3 模型
+
+![Screen Shot 2016-05-19 at 2.13.42 P](/assets/img/Screen%20Shot%202016-05-19%20at%202.13.42%20PM.png)
 模型的写法跟原来的php写法差不多
-### 3.3.1.命名Model的类均是以Model结尾的单词，例如ClientModel，ClassifyModel等等。另外每个Model层声明一个已经实例化的变量，例如var GoldenStatueTaskAo = &GoldenStatueTaskAoModel{}
-### 3.3.2.声明Model没有特别限制继承于某个类，你可以随意建立自己的继承体系
-### 3.3.3.方法无
-## 3.4.数据![](/assets/img/14580513367718.jpg)
+### 3.3.1 命名Model的类均是以Model结尾的单词，例如ClientAoModel，ClassifyAoModel等等。
+### 3.3.2 声明所有的Model均应继承自web.Model，或者是web.Model的子类，才能正常使用到后面的工具库
+### 3.3.3 方法无
+
+## 3.4 测试
+
+![Screen Shot 2016-05-19 at 2.16.28 P](/assets/img/Screen%20Shot%202016-05-19%20at%202.16.28%20PM.png)
+
+测试是一个全新的模块，主要承载着model层的单元测试，数据测试与性能测试的职责。
+
+
+### 3.4.1 命名
+Test的类均是以Test结尾的单词，例如ClientAoTest，ClassifyAoTest等等。
+
+### 3.4.2 声明
+所有的Test均应继承自web.Test，或者是web.Test的子类，才能正常使用到后面的工具库
+
+### 3.4.3 方法
+web.Test会新增三个常用的方法，分别是
+AssertEqual（校验数据相等）
+AssertError（校验错误相等）
+Concurrent（模拟并发行为）
+Benchmark（性能测试）
+RandomInt（生成随机数）
+RandomString（生成随机字符串）
+RequestReset（重置请求）
+## 3.5 数据![](/assets/img/14580513367718.jpg)
 数据是新增的写法，是强类型的go所特有的东西。
-### 3.4.1.命名Data的类均是以Data结尾的单词，例如ClientData，ClientAddressData等等。而且，同一个包下的data都应该放在同一个文件中
-### 3.4.2.声明无
-### 3.4.3.方法无
-## 3.5.枚举![](/assets/img/14580513435824.jpg)
+### 3.5.1 命名Data的类均是以Data结尾的单词，例如ClientData，ClientAddressData等等。而且，同一个包下的data都应该放在同一个文件中
+### 3.5.2 声明无
+### 3.5.3 方法无
+## 3.6 枚举![Screen Shot 2016-05-19 at 2.22.47 P](/assets/img/Screen%20Shot%202016-05-19%20at%202.22.47%20PM.png)
 枚举跟php类型类似，不过enum是个实例，而不是类型，这是要特别注意区分的。
-### 3.5.1.命名Enum的类均是以Enum结尾的单词，例如ClientTypeEnum，ClientStateEnum等等。而且，同一个包下的enum都应该放在同一个文件中
-### 3.5.2.声明var xxxx struct，这是go中的特别写法，声明与定义struct写在一起了。刚声明出来的实例是没有数据的，需要用我们的特别的方法InitEnumStruct来初始化enum结构体。另外，所有的enum结构体必须继承自EnumStruct
-### 3.5.3.方法Names（获取enum内的常量map）
-# 4.逻辑
-## 4.1.错误与异常错误与异常在go中是严格区分的，错误就是业务错误，是由用户触发的错误，异常就是程序错误，是由预料的问题触发的。例如，数据库崩溃，七牛崩溃，微信服务器崩溃，这些都是不可抗力现象，不是由用户触发的错误，应该定义为异常。而，输入的不是整数，权限不足，这些都是用户触发的现象，应该定义为错误。在go中，错误为error，异常为panic。不过由于error是手动传递的，写法比较蛋疼，所以框架中引入了throw的写法，用异常逻辑来写error，同时也会区分panic与error。### 4.1.1.写法![](/assets/img/14580513534738.jpg)
+### 3.6.1 命名Enum的类均是以Enum结尾的单词，例如ClientTypeEnum，ClientStateEnum等等。而且，同一个包下的enum都应该放在同一个文件中
+### 3.6.2 声明var xxxx struct，这是go中的特别写法，声明与定义struct写在一起了。刚声明出来的实例是没有数据的，需要用我们的特别的方法InitEnumStruct来初始化enum结构体。另外，所有的enum结构体必须继承自EnumStruct
+### 3.6.3 方法Names（获取enum内的常量map）
+Datas（获取enum内的数据列表）
+
+# 4 工具库
+凡是继承Web.Controller,web.Model与web.Test的实例都会获得工具库的功能，而工具库的配置则在conf/app.conf文件下，具体的用法就不说了
+
+## 4.1 数据库
+this.DB
+
+## 4.2 登录态
+this.Session
+
+## 4.3 缓存
+this.Cache
+
+## 4.4 日志
+this.Log
+
+## 4.5 监控
+this.Monitor
+
+## 4.6 定时器
+this.Timer
+
+## 4.7 队列
+this.Queue
+# 5 逻辑
+## 5.1 错误与异常错误与异常在go中是严格区分的，错误就是业务错误，是由用户触发的错误，异常就是程序错误，是由预料的问题触发的。例如，数据库崩溃，七牛崩溃，微信服务器崩溃，这些都是不可抗力现象，不是由用户触发的错误，应该定义为异常。而，输入的不是整数，权限不足，这些都是用户触发的现象，应该定义为错误。在go中，错误为error，异常为panic。不过由于error是手动传递的，写法比较蛋疼，所以框架中引入了throw的写法，用异常逻辑来写error，同时也会区分panic与error。### 5.1.1 写法![](/assets/img/14580513534738.jpg)
 数据库错了就是panic，取出数据不存在为Throw
-### 4.1.2.库函数特别注意，gopath里面的库函数不允许panic与throw，因为作为一个库，在不确定具体业务的情况下，是无法定义错误是业务错误，还是异常错误的。所以的库函数应该只返回error。就像xorm中只返回error，而不panic一样。例如，写一个http库，定义一个post操作，用来封装上传表单数据的。在上传七牛图片时，用这个post方法时，如果失败了应该是panic在上传地址数据到金象系统时，用这个post方法时，如果失败了应该是throw，（因为同步地址数据到金象系统上只是一个旁路逻辑）因为，同一个http库，在不同的业务中是不清楚究竟是panic还是throw的，所以库只能保守地返回error，由调用方来确定是throw还是error
-### 4.1.3.谁是异常一般来说，只有如下情况时需要报出panic异常的，其他情况下都应该报出throw异常。Panic：数据库异常，redis异常，七牛异常，opensearch异常，手机验证码异常。Throw：第三方业务系统（金象系统），以及其他模块。
-## 4.2.并发禁止全局变量，除非该变量一开始就被初始化了，例如enum。Go的多个goroutine之间时并发关系，一个不小心就有数据冲突，会造成很严重问题的，而且难于排查。禁止使用go来生成线程，理由同上。
-## 4.3.数组禁止使用数组，而只能用slice
-## 4.4.定时器![](/assets/img/14580513619527.jpg)
-只能使用startTimerTask来启动定时器，有崩溃恢复功能，和自动日志功能，可靠稳定，禁止使用go的方式来启动定时器。
-## 4.5.无副作用编写逻辑时，无副作用是一个很重要的原则，所有函数必须按值传递，而且永远不能修改输入参数！![](/assets/img/14580513695999.jpg)
+### 5.1.2 库函数特别注意，gopath里面的库函数不允许panic与throw，因为作为一个库，在不确定具体业务的情况下，是无法定义错误是业务错误，还是异常错误的。所以的库函数应该只返回error。就像xorm中只返回error，而不panic一样。例如，写一个http库，定义一个post操作，用来封装上传表单数据的。在上传七牛图片时，用这个post方法时，如果失败了应该是panic在上传地址数据到金象系统时，用这个post方法时，如果失败了应该是throw，（因为同步地址数据到金象系统上只是一个旁路逻辑）因为，同一个http库，在不同的业务中是不清楚究竟是panic还是throw的，所以库只能保守地返回error，由调用方来确定是throw还是error
+### 5.1.3 谁是异常一般来说，只有如下情况时需要报出panic异常的，其他情况下都应该报出throw异常。Panic：数据库异常，redis异常，七牛异常，opensearch异常，手机验证码异常。Throw：第三方业务系统（金象系统），以及其他模块。
+## 5.2 并发业务逻辑中**禁止使用全局变量**，除非该变量一开始就被初始化了，例如enum。Go的多个goroutine之间时并发关系，一个不小心就有数据冲突，会造成很严重data race问题，而且难于排查。同理，业务逻辑中**禁止使用多线程**。那么，既然没有全局变量与多线程，业务逻辑中也**没有必要使用锁与channel**
+
+当然，库函数没有这个限制，相应的，库函数由于使用了并发导致data race问题由库的作者负责。
+## 5.3 数组禁止使用数组，而只能用slice
+## 5.4 无副作用编写逻辑时，无副作用是一个很重要的原则，所有函数必须按值传递，而且永远不能修改输入参数！![](/assets/img/14580513695999.jpg)
 例如，上面UserLoginModel的Get函数中，调用方只是想获取一下getImageCount的数值，而且输入参数也是按值传递，可是没想到，调用了以后连自己的Image数组里面的数据都改变了。这跟GetImageCount接口的承诺相违背的，它只是计算Count，按值传递，从来没有提示过调用方是会修改输入参数的。![](/assets/img/14580513775414.jpg)
-解决方法，很简单，GetImageCount里面不要去修改输入参数就可以了。这样调用方调用GetImageCount接口时结果是可预测的，而不是无法理解的。# 5.部署现网均需要用supervisor来启动，崩溃后自动重启，避免失误导致全站挂机。禁止bee run的方式启动，崩溃后无法重启，而且启动有严重延迟。
+解决方法，很简单，GetImageCount里面不要去修改输入参数就可以了。这样调用方调用GetImageCount接口时结果是可预测的，而不是无法理解的。## 5.5 部署现网均需要用supervisor来启动，崩溃后自动重启，避免失误导致全站挂机。禁止bee run的方式启动，崩溃后无法重启，而且启动有严重延迟。
 
+# 6 命名> 好的代码自己会说话
 
+不记得是在哪里听过的话，说得真是有道理。比起满篇代码注释，还不如在命名上多花点功夫，让代码自己告诉你有什么用。我们有一套约定成俗的命名规范，例如。
+
+问题模块QuestionAo
+
+增删改查问题
+
+|功能|名字|参数|
+|:--|:--|:--|
+|搜索问题|Search|(where,limit)|
+|添加问题|Add|(questionData)|
+|删除问题|Del|(questionId)|
+|修改问题|Mod|(questionId,questionData)|
+|获取问题|Get|(questionId)|
+|批量获取问题|GetBatch|(questionIds)|
+
+增删改查问题下的答案信息
+
+|功能|名字|参数|
+|:--|:--|:--|
+|搜索答案|SearchAnswer|(where,limit)|
+|添加答案|AddAnswer|(data)|
+|删除答案|DelAnswer|(answerId)|
+|修改答案|ModAnswer|(answerId,answerData)|
+|获取答案|GetAnswer|(answerId)|
+|批量获取答案|GetBatchAnswer|(answerIds)|
+
+部分情况下，我们需要用非主键获取或修改信息的
+
+|功能|名字|参数|
+|:--|:--|:--|
+|获取单个用户的问题|GetByClientId|(clientId)|
+|获取多个用户的问题|GetByClientIds|(clientIds)|
+|获取单个问题下的答案|GetAnswerByQuestionId|(questionId,limit)|
+|获取多个问题下的答案|GetAnswerByQuestionIds|(questionIds,limit)|
+|获取单个问题下的答案数|GetAnswerNumByQuestionId|(questionId,limit)|
+|获取多个问题下的答案数|GetAnswerNumByQuestionIds|(questionIds,limit)|
+|删除单个问题下的所有答案|DelAnswerByQuestionId|(questionId)|
+
+尽可能将修改变为一个动作，而不是直接的setState
+
+|功能|名字|参数|
+|:--|:--|:--|
+|支持答案|LikeAnswer|(answerId,clientId)|
+|反对答案|HateAnswer|(answerId,clientId)|
+|评论答案|CommentAnswer|(answerId,clientId,text)|
 
