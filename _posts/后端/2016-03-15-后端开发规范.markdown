@@ -14,7 +14,8 @@ category: 后端
 ## 3.2 控制器![Screen Shot 2016-05-19 at 2.12.53 P](/assets/img/Screen%20Shot%202016-05-19%20at%202.12.53%20PM.png)
 控制器的写法略为蛋疼，名字后面加上view名字来定义一个controller的方法
 ### 3.2.1 命名Controrller的类均是以Controller结尾的单词，例如ClientController，ClassifyController等等### 3.2.2 声明所有的Controller均应继承自web.Controller，或者是web.Controller的子类，才能正常使用到我们的自动路由功能。
-### 3.2.3 方法web.Controller会新增三个常用的方法，分别是CheckGet（校验Get参数）CheckPost（校验Post参数）AutoRender（将controller输出自动引导到view层输出）## 3.3 模型
+### 3.2.3 方法web.Controller会新增三个常用的方法，分别是
+* CheckGet（校验Get参数）* CheckPost（校验Post参数）* AutoRender（将controller输出自动引导到view层输出）## 3.3 模型
 
 ![Screen Shot 2016-05-19 at 2.13.42 P](/assets/img/Screen%20Shot%202016-05-19%20at%202.13.42%20PM.png)
 模型的写法跟原来的php写法差不多
@@ -37,13 +38,14 @@ Test的类均是以Test结尾的单词，例如ClientAoTest，ClassifyAoTest等�
 
 ### 3.4.3 方法
 web.Test会新增三个常用的方法，分别是
-AssertEqual（校验数据相等）
-AssertError（校验错误相等）
-Concurrent（模拟并发行为）
-Benchmark（性能测试）
-RandomInt（生成随机数）
-RandomString（生成随机字符串）
-RequestReset（重置请求）
+
+* AssertEqual（校验数据相等）
+* AssertError（校验错误相等）
+* Concurrent（模拟并发行为）
+* Benchmark（性能测试）
+* RandomInt（生成随机数）
+* RandomString（生成随机字符串）
+* RequestReset（重置请求）
 ## 3.5 数据![](/assets/img/14580513367718.jpg)
 数据是新增的写法，是强类型的go所特有的东西。
 ### 3.5.1 命名Data的类均是以Data结尾的单词，例如ClientData，ClientAddressData等等。而且，同一个包下的data都应该放在同一个文件中
@@ -53,8 +55,9 @@ RequestReset（重置请求）
 枚举跟php类型类似，不过enum是个实例，而不是类型，这是要特别注意区分的。
 ### 3.6.1 命名Enum的类均是以Enum结尾的单词，例如ClientTypeEnum，ClientStateEnum等等。而且，同一个包下的enum都应该放在同一个文件中
 ### 3.6.2 声明var xxxx struct，这是go中的特别写法，声明与定义struct写在一起了。刚声明出来的实例是没有数据的，需要用我们的特别的方法InitEnumStruct来初始化enum结构体。另外，所有的enum结构体必须继承自EnumStruct
-### 3.6.3 方法Names（获取enum内的常量map）
-Datas（获取enum内的数据列表）
+### 3.6.3 方法
+* Names（获取enum内的常量map）
+* Datas（获取enum内的数据列表）
 
 # 4 工具库
 凡是继承Web.Controller,web.Model与web.Test的实例都会获得工具库的功能，而工具库的配置则在conf/app.conf文件下，具体的用法就不说了
@@ -90,7 +93,7 @@ this.Queue
 ## 5.3 数组禁止使用数组，而只能用slice
 ## 5.4 无副作用编写逻辑时，无副作用是一个很重要的原则，所有函数必须按值传递，而且永远不能修改输入参数！![](/assets/img/14580513695999.jpg)
 例如，上面UserLoginModel的Get函数中，调用方只是想获取一下getImageCount的数值，而且输入参数也是按值传递，可是没想到，调用了以后连自己的Image数组里面的数据都改变了。这跟GetImageCount接口的承诺相违背的，它只是计算Count，按值传递，从来没有提示过调用方是会修改输入参数的。![](/assets/img/14580513775414.jpg)
-解决方法，很简单，GetImageCount里面不要去修改输入参数就可以了。这样调用方调用GetImageCount接口时结果是可预测的，而不是无法理解的。## 5.5 部署现网均需要用supervisor来启动，崩溃后自动重启，避免失误导致全站挂机。禁止bee run的方式启动，崩溃后无法重启，而且启动有严重延迟。
+解决方法，很简单，GetImageCount里面不要去修改输入参数就可以了。这样调用方调用GetImageCount接口时结果是可预测的，而不是无法理解的。## 5.5 部署现网均需要用supervisor来启动，崩溃后自动重启，避免编程失误导致全站挂机。禁止fishcmd run --watch的方式启动，崩溃后无法重启，而且启动有严重延迟。
 
 # 6 命名> 好的代码自己会说话
 
