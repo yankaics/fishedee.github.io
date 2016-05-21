@@ -1,0 +1,211 @@
+---
+layout: post
+category: 后端
+---
+
+# 1 概述
+io阻塞
+
+# 2 问题
+我们模拟一个场景，后台服务有两个请求，一个请求是向七牛上传图片，另外一个请求是简单的业务场景
+
+## 2.1 php版本
+
+```
+<?php
+	if( isset($_GET['qiniu']) ){
+		echo file_get_contents("http://www.google.com.hk")
+	}else{
+		echo "Hello World"
+	}
+?>
+```
+
+php版本
+
+## 2.2 nodejs版本
+
+```
+const http = require('http');
+var request = require('request');
+
+const hostname = '127.0.0.1';
+const port = 8080;
+
+const server = http.createServer((req, res) => {
+	if(req.url.indexOf("qiniu") != -1 ){
+		request("http://www.baidu.com",function(error,response,body){
+			res.end(body);
+		})
+	}else{
+  		res.end('NodeJs Hello World\n');
+	}
+});
+
+server.listen(port, hostname, () => {
+  console.log(`Server running at http://${hostname}:${port}/`);
+});
+```
+
+nodejs版本
+
+## 2.3 go版本
+
+```
+package main
+
+import (
+	"net/http"
+	"io/ioutil"
+)
+
+type handler struct {
+}
+
+func (this *handler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+	query := request.URL.Query()
+	_, isExist := query["qiniu"]
+	if isExist{
+		resp,err := http.Get("http://www.google.com.hk")
+		//resp,err := http.Get("http://www.baidu.com")
+		if err != nil{
+			panic(err)
+		}
+		defer resp.Body.Close()
+		result , err := ioutil.ReadAll(resp.Body)
+		if err != nil{
+			panic(err)
+		}
+		response.Write(result)
+	}else{
+		response.Write([]byte("Go Hello World"))
+	}
+}
+
+func main() {
+	err := http.ListenAndServe(":8080", &handler{})
+	if err != nil{
+		panic(err)
+	}
+}
+```
+
+go版本
+
+# 3 模拟七牛挂了
+
+## 3.1 php
+
+## 3.2 nodejs
+
+![Screen Shot 2016-05-21 at 2.14.18 P](/assets/img/Screen%20Shot%202016-05-21%20at%202.14.18%20PM.png)
+
+设置10000个请求向gooogle.com.hk拉数据，很明显，挂定了，所有请求全部堵塞。
+
+![Screen Shot 2016-05-21 at 2.19.03 P](/assets/img/Screen%20Shot%202016-05-21%20at%202.19.03%20PM.png)
+
+这时向正常业务发请求，数据量为5679 request/s，正常业务基本没有受影响。
+
+![Screen Shot 2016-05-21 at 2.34.35 P](/assets/img/Screen%20Shot%202016-05-21%20at%202.34.35%20PM.png)
+
+线程数量保持为11个
+
+## 3.3 go
+
+![Screen Shot 2016-05-21 at 2.21.01 P](/assets/img/Screen%20Shot%202016-05-21%20at%202.21.01%20PM.png)
+
+设置10000个请求向gooogle.com.hk拉数据，很明显，挂定了，所有请求全部堵塞。
+
+![Screen Shot 2016-05-21 at 2.21.07 P](/assets/img/Screen%20Shot%202016-05-21%20at%202.21.07%20PM.png)
+
+这时向正常业务发请求，数据量为7000 request/s，正常业务基本没有受影响。
+
+![Screen Shot 2016-05-21 at 2.33.37 P](/assets/img/Screen%20Shot%202016-05-21%20at%202.33.37%20PM.png)
+
+线程数量保持为7个
+
+## 3.4 总结
+为啥php会一拖N，一挂全挂，即使开足100个线程，仍然会有一样的问题，而nodejs与go的任务之间不会有一挂全挂的问题。
+
+# 4 原因
+
+## 4.1 线程的生命周期
+
+![](/assets/img/14638137017021.jpg)
+
+线程的生命周期，从生命周期中可以看到，当该线程由于io阻塞时，该线程会扔到阻塞区域，然后cpu会切换到其他线程上继续运行。
+
+## 4.1 php中的多线程
+ 
+php中的每个线程是等待一个io事件的，导致一个io事件的阻塞会导致整条线程的阻塞，系统线程的利用效率低。
+
+## 4.2 nodejs中的非阻塞
+
+nodejs的业务线程就只有一个，其他线程是辅助线程。单个线程能倾听多个io事件，当其中一个io事件触发时，会唤醒这个线程，这个线程根据触发事件来回调对应的js函数。这样，nodejs就能实现单线程吞吐量比php要高得多。
+
+![](/assets/img/14638145520795.jpg)
+
+所以，nodejs里面全是异步操作，系统吞吐量大，但是写起来心塞，容易导致callback hell的问题。
+
+## 4.3 go中的轻量级线程
+
+![](/assets/img/14638149895271.jpg)
+
+之前我们所说的线程都是内核线程，由操作系统分配的线程。系统分配的线程的优点是，线程之间能平均分配cpu时间。但是，在go里面，每个goroutine的准确名字并不是go线程，而是go协程。多个go协程会映射到系统的一个系统线程中，这样就能优雅地实现了单个线程等待多个io事件，同时不会带来nodejs中的callback hell问题。
+
+![](/assets/img/14638152468931.jpg)
+
+Go的调度器内部有三个重要的结构：M，P，S
+M:代表真正的内核OS线程，和POSIX里的thread差不多，真正干活的人
+G:代表一个goroutine，它有自己的栈，instruction pointer和其他信息（正在等待的channel等等），用于调度。
+P:代表调度的上下文，可以把它看做一个局部的调度器，使go代码在一个线程上跑，它是实现从N:1到N:M映射的关键。
+
+## 4.4 总结
+总结，重io业务会不会影响其他业务的关键是，单个内核线程是不是倾听多个io事件，如果是，那么单个内核线程就能并发处理多个io业务，如果不行，就会拖累了其他业务的进行。按着这个道理，我们让php也用异步的方式实现了，是不是能解决这个问题？
+
+```
+
+<?php
+use Workerman\Worker;
+use \Workerman\Connection\AsyncTcpConnection;
+require_once dirname(__FILE__).'/Workerman/Autoloader.php';
+
+// 创建一个Worker监听2346端口，使用websocket协议通讯
+$ws_worker = new Worker("http://0.0.0.0:8080");
+
+// 启动4个进程对外提供服务
+$ws_worker->count = 4;
+
+// 当收到客户端发来的数据后返回hello $data给客户端
+$ws_worker->onMessage = function($connection, $data)
+{
+    if( isset($_GET['qiniu'])){
+    	 $connection_to_baidu = new AsyncTcpConnection('tcp://www.baidu.com:80');
+	    // 当连接建立成功时，发送http请求数据
+	    $connection_to_baidu->onConnect = function($connection_to_baidu){
+	        echo "connect success\n";
+	        $connection_to_baidu->send("GET / HTTP/1.1\r\nHost: www.baidu.com\r\nConnection: keep-alive\r\n\r\n");
+	    };
+	    $connection_to_baidu->onMessage = function($connection_to_baidu, $http_buffer)use($connection){
+	    	$connection->send($http_buffer);
+	    };
+	    $connection_to_baidu->onClose = function($connection_to_baidu){
+	        echo "connection closed\n";
+	    };
+	    $connection_to_baidu->onError = function($connection_to_baidu, $code, $msg){
+	        echo "Error code:$code msg:$msg\n";
+	    };
+	    $connection_to_baidu->connect();
+    }else{
+    	 $connection->send('Phpworkerman Hello World');
+    }
+};
+
+// 运行
+Worker::runAll();
+```
+
+实测能抵御io阻塞导致全站崩溃的问题
+
+# 5 总结 
+
