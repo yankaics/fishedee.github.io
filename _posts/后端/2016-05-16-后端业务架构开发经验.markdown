@@ -19,64 +19,36 @@ category: 后端
 ## 3.1 领域编程
 面向领域编程，而不是面向数据库编程
 
-## 3.2 单向依赖
-队列与解耦
-
-# 4 Keep it simple
-
-## 4.1 接口正交
-
+## 3.2 正交分解
 如果是可能公开的需要长期维护的接口，形式要尽量简单、参数要尽量少、接口数量也要尽可能少，互相在功能上没有重叠，按照书上的称呼这叫正交。只有这样才能保证未来的接口升级对旧版接口用户的影响尽可能的小。
 
 * 分页接口要单独为一个接口，不要和其他接口合并在一起
 * 批量接口是性能的关键
 
-## 4.2 接口名称
-接口名称有一个约定成俗的规则，举例
+## 3.3 单向依赖
+队列与解耦
 
-问题模块QuestionAo
+# 4 Keep it simple
 
-增删改查问题
+## 4.1 刚好能用
 
-|功能|名字|参数|
-|:--|:--|:--|
-|搜索问题|Search|(where,limit)|
-|添加问题|Add|(questionData)|
-|删除问题|Del|(questionId)|
-|修改问题|Mod|(questionId,questionData)|
-|获取问题|Get|(questionId)|
-|批量获取问题|GetBatch|(questionIds)|
+为未来而设计，但不要为未来的未来而设计。开发为需求服务，为了适应未来的需求变化，我们会引入设计模式来让后续的开发变得简单快速。可是，如果过度地使用设计模式，过度猜测未来需求的变化，导致代码的适应性过强，接口和实现都变复杂了，反而会得不偿失。因为，未来的需求总是难以猜测的，过度设计的后果很有可能是白做一场，同时让代码多出了过度的复杂性。
 
-增删改查问题下的答案信息
+试想一下，如果只是实现一个预计日均PV为10w的书本管理系统，我们用的不是nginx+php+mysql，而是负载均衡+分布式soa+分布式队列＋分布式cache+nosql，嗯，这有点6。估计写完代码了，书本管理系统的需求都已经推倒重做无数遍了。
 
-|功能|名字|参数|
-|:--|:--|:--|
-|搜索答案|SearchAnswer|(where,limit)|
-|添加答案|AddAnswer|(data)|
-|删除答案|DelAnswer|(answerId)|
-|修改答案|ModAnswer|(answerId,answerData)|
-|获取答案|GetAnswer|(answerId)|
-|批量获取答案|GetBatchAnswer|(answerIds)|
+更好的办法是保证架构在最简单的复杂度下刚好能用即可。在实在遇到更为复杂的需求时，为了实现这个需求，实现的复杂性比重构代码还高时，我们才驱动架构的变化。让需求驱动架构的发展，而不是臆想架构的发展。
 
-部分情况下，我们需要用非主键获取或修改信息的
+> 好架构是迭代出来的，不是设计出来的。
 
-|功能|名字|参数|
-|:--|:--|:--|
-|获取单个用户的问题|GetByClientId|(clientId)|
-|获取多个用户的问题|GetByClientIds|(clientIds)|
-|获取单个问题下的答案|GetAnswerByQuestionId|(questionId,limit)|
-|获取多个问题下的答案|GetAnswerByQuestionIds|(questionIds,limit)|
-|获取单个问题下的答案数|GetAnswerNumByQuestionId|(questionId,limit)|
-|获取多个问题下的答案数|GetAnswerNumByQuestionIds|(questionIds,limit)|
-|删除单个问题下的所有答案|DelAnswerByQuestionId|(questionId)|
+* 过度设计
+* 过早优化
+* 过度测试
+* 过度文档
 
-尽可能将修改变为一个动作，而不是直接的setState
+重构
 
-|功能|名字|参数|
-|:--|:--|:--|
-|支持答案|LikeAnswer|(answerId,clientId)|
-|反对答案|HateAnswer|(answerId,clientId)|
-|评论答案|CommentAnswer|(answerId,clientId,text)|
+## 4.2 奥卡姆剃刀定律
+如果两个设计实现后的效果是相差不大的，那么就选择最简单的那个设计。这启发我们，接口数量仅可能少，接口参数尽可能少，数据字段也尽可能的少。
 
 # 4 Design for failure
 错误是每时每刻都会发生的，必须要检查。如果发生错误时，必须中断操作，不往下继续，避免发生严重的数据不一致问题。

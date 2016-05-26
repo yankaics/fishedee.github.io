@@ -1,0 +1,97 @@
+---
+layout: post
+category: 后端
+---
+
+# 1 概述
+ Socks代理协议，socks代理是一直执行在运输层与应用层之间的代理协议，与HTTP代理不同的是，socks处理的TCP/UDP包，所以，其能代理任意的应用层协议，而不只是HTTP协议。
+Socks代理协议有两个，分别是socks4与socks5协议，socks4协议只支持TCP协议，而且不支持加密，socks5协议同时支持TCP/UDP协议，而且支持加密~
+
+# 2 服务器端
+[Shadowsocks](https://github.com/shadowsocks/shadowsocks)是一个创建socks5代理服务器的代理工具，安装非常简单
+
+```
+apt-get install python-pip
+pip install shadowsocks
+```
+
+两行代码安装shadowsocks
+
+```
+ssserver -p 8000 -k password -m aes-256-cfb -d start
+ssserver -p 8000 -k password -m aes-256-cfb -d stop
+```
+
+两行代码启动或关闭shadowsocks，8000是监听端口，password是密码，aes
+
+# 3 客户端
+
+## 3.1 Windows
+
+![](/assets/img/14639828913298.jpg)
+
+[客户端下载](http://sourceforge.net/projects/shadowsocksgui/files/dist/)利用gui建立一个本地代理服务器，连接socks5服务器的IP和端口，以及建立1080端口作为本地浏览器的http与https代理即可。
+
+![](/assets/img/14639829056575.jpg)
+
+Chrome浏览器上使用SwitchySharp搭建1080的代理，就可以随时切换了。
+
+## 3.2 Linux
+
+```
+apt-get install python-pip
+pip install shadowsocks
+```
+
+两行代码安装shadowsocks
+
+```
+sslocal -s serverip -p 8000 -b 127.0.0.1 -l 1080 -k password -m aes-256-cfb -d start
+sslocal -s serverip -p 8000 -b 127.0.0.1 -l 1080 -k password -m aes-256-cfb -d stop
+```
+两行代码启动或关闭shadowsocks client，8000是远程服务端口，1080是本地服务端口，password是密码，aes-256-cfb是加密方式，1080是本地的socks端口。以上命令就可以将远程的shadowsocks服务，代理到本地的1080端口。
+
+```
+apt-get install tsocks
+vim /etc/tsocks.conf
+server = 127.0.0.1 # SOCKS 服务器的 IP
+server_type = 5 # SOCKS 服务版本
+server_port = 1080 ＃SOCKS 服务使用的端口
+```
+
+![](/assets/img/14639830214777.jpg)
+
+然后安装tsocks服务，设置tsocks配置，然后以后执行tsocks + 命令就能运行以走代理的方式运行了。
+
+## 3.3 Mac
+
+![](/assets/img/14639830327128.jpg)
+
+Mac下的shadowsocks客户端还算比较简单的，找一个叫[goagentx](https://github.com/mithril-global/GoAgentX)的东西安装好了。
+可惜goagentx将远程的socks映射到本地后，还是socks代理，毕竟很多都不支持socks代理，只支持http代理的。这时候需要用到privoxy代理来将本地socks代理转换为http或https代理
+
+```
+brew install privoxy
+listen-address 0.0.0.0:7128
+forward-socks5 / localhost:6128
+sudo /usr/local/sbin/privoxy /usr/local/etc/privoxy/config
+```
+
+安装privoxy,在/usr/local/etc/privoxy/config中加入以上两句,启动privoxy
+ok，就这么就能启动privoxy，将socks的6128端口映射到本地的http/https的7128端口了。
+
+```
+git clone https://github.com/openroc/tsocks-macosx
+cd tsocks-macosx
+autoconf
+./configure --libdir=/usr/local/lib
+make
+sudo cp tsocks /usr/local/bin
+sudo cp libtsocks.dylib.1.8 /usr/local/lib
+sudo ln -sf /usr/local/lib/libtsocks.dylib.1.8 /usr/local/lib/libtsocks.dylib
+sudo cp tsocks.conf.simple.example /etc/tsocks.conf
+```
+
+[tsocks](https://github.com/openroc/tsocks-macosx)在Linux上是默认可用的，在mac上需要自己下载，无法用brew安装，比较忧伤。配置倒是和Linux是一样的。
+
+
