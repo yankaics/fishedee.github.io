@@ -4,7 +4,8 @@ category: 后端
 ---
 
 # 1 概述
- Socks代理协议，socks代理是一直执行在运输层与应用层之间的代理协议，与HTTP代理不同的是，socks处理的TCP/UDP包，所以，其能代理任意的应用层协议，而不只是HTTP协议。
+Socks代理协议，socks代理是一直执行在运输层与应用层之间的代理协议，与HTTP代理不同的是，socks处理的TCP/UDP包，所以，其能代理任意的应用层协议，而不只是HTTP协议。
+
 Socks代理协议有两个，分别是socks4与socks5协议，socks4协议只支持TCP协议，而且不支持加密，socks5协议同时支持TCP/UDP协议，而且支持加密~
 
 # 2 服务器端

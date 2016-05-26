@@ -1,3 +1,8 @@
+---
+layout: post
+category: 后端
+---
+
 # 1 概述
 sed的用法
 
