@@ -1,0 +1,94 @@
+# 1 概述
+数据库的锁机制
+
+# 2 锁类型
+
+* 快照读
+* 当前读
+* 
+X锁与S锁
+
+# 3 锁数据类型
+
+* 记录锁
+* 范围锁
+
+# 4 隔离级别
+* UnCommited
+* ReadCommited
+* RepeatedRead
+* Seariable
+
+# 5 实现
+索引锁
+
+# 6 等待
+
+## 6.1 等待原则
+
+## 6.2 死锁检测
+
+## 6.3 避免死锁
+
+* 相同的锁顺序
+* 不变的锁等级
+
+# 7 例子
+
+## 7.1 点赞累加
+
+```
+SELECT `contentClientId`, `contentId`, `contentType`, `clientId`, `visitNum`, `visitTime`, `likeNum`, `likeTime`, `shareNum`, `shareTime`, `collectNum`, `collectTime`, `createTime`, `modifyTime` FROM `t_content_client` WHERE clientId = 10001 and contentId = 20001 for update
+insert into t_content_client  (clientId,contentId,contentType, visitNum, likeNum, collectNum, shareNum)  values (10001, 20001, 1, 1, 0, 0, 0)  on duplicate key update  likeNum = 1, visitTime = now()
+```
+
+我们记录10001用户对20001内容进行点赞操作，那么likeNum设置为1，如果再次进行点赞操作，那么likeNum设置为0，就是一个可逆的点赞操作。但是发布后发现有很多deadLock的报警。
+
+```
+*** (1) TRANSACTION:
+TRANSACTION 245466, ACTIVE 6 sec starting index read
+mysql tables in use 1, locked 1
+LOCK WAIT 2 lock struct(s), heap size 360, 1 row lock(s)
+MySQL thread id 15790, OS thread handle 0x700000b4f000, query id 444874 localhost root statistics
+SELECT `contentClientId`, `contentId`, `contentType`, `clientId`, `visitNum`, `visitTime`, `likeNum`, `likeTime`, `shareNum`, `shareTime`, `collectNum`, `collectTime`, `createTime`, `modifyTime` FROM `t_content_client` WHERE clientId = 10001 and contentId = 20001 for update
+*** (1) WAITING FOR THIS LOCK TO BE GRANTED:
+RECORD LOCKS space id 2964 page no 4 n bits 72 index `contentClientIndex` of table `bakeweb`.`t_content_client` trx id 245466 lock_mode X locks rec but not gap waiting
+Record lock, heap no 2 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
+ 0: len 4; hex 80004e21; asc   N!;;
+ 1: len 4; hex 80002711; asc   ' ;;
+ 2: len 4; hex 80002711; asc   ' ;;
+
+*** (2) TRANSACTION:
+TRANSACTION 245465, ACTIVE 9 sec inserting
+mysql tables in use 1, locked 1
+4 lock struct(s), heap size 1184, 3 row lock(s), undo log entries 1
+MySQL thread id 15792, OS thread handle 0x700001523000, query id 444875 localhost root update
+insert into t_content_client  (clientId,contentId,contentType, visitNum, likeNum, collectNum, shareNum)  values (10001, 20001, 1, 1, 0, 0, 0)  on duplicate key update  visitNum = visitNum +1, visitTime = now()
+*** (2) HOLDS THE LOCK(S):
+RECORD LOCKS space id 2964 page no 4 n bits 72 index `contentClientIndex` of table `bakeweb`.`t_content_client` trx id 245465 lock_mode X locks rec but not gap
+Record lock, heap no 2 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
+ 0: len 4; hex 80004e21; asc   N!;;
+ 1: len 4; hex 80002711; asc   ' ;;
+ 2: len 4; hex 80002711; asc   ' ;;
+
+*** (2) WAITING FOR THIS LOCK TO BE GRANTED:
+RECORD LOCKS space id 2964 page no 4 n bits 72 index `contentClientIndex` of table `bakeweb`.`t_content_client` trx id 245465 lock_mode X waiting
+Record lock, heap no 2 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
+ 0: len 4; hex 80004e21; asc   N!;;
+ 1: len 4; hex 80002711; asc   ' ;;
+ 2: len 4; hex 80002711; asc   ' ;;
+```
+
+从日志中可以看出，由于A事务先进行select for update操作，获得了lock_mode X no gap锁，B事务也进行select for update操作，请求获得lock_mode X no gap，B等待A事务释放。而A作死地再次请求lock_mode X锁，这时候由于有B事务等待lock_mode X no gap锁，所以A锁需要等待B锁释放，A锁与B锁互相等待，导致了死锁。
+
+```
+insert ignore (clientId,contentId,contentType, visitNum, likeNum, collectNum, shareNum) valeus(10001, 20001, 0, 0, 0, 0, 0)
+begin
+SELECT `contentClientId`, `contentId`, `contentType`, `clientId`, `visitNum`, `visitTime`, `likeNum`, `likeTime`, `shareNum`, `shareTime`, `collectNum`, `collectTime`, `createTime`, `modifyTime` FROM `t_content_client` WHERE clientId = 10001 and contentId = 20001 for update
+update t_content_client  set likeNum = 1, visitTime = now() where clientId = 10001 and contentId = 20001
+commit
+```
+
+解决办法很简单，将事务内的操作全部统一为lock_mode X no gap锁，A事务内的锁不需要提权，从而就不需要等待B事务了。而insert操作可能需要的lock_mode X锁提前到事务操作之前就可以了。
+
+
