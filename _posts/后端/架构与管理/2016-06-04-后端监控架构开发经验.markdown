@@ -1,0 +1,19 @@
+---
+layout: post
+category: 后端
+---
+
+# 1 概述
+后端监控架构开发经验
+
+# 2 采集数据
+go-metrics
+
+# 3 存储数据
+influxdb
+
+# 4 展示数据
+Grafana
+
+# 5 监控数据
+

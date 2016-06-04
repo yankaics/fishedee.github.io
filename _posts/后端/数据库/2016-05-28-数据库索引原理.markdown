@@ -8,6 +8,95 @@ category: 后端
 
 # 2 搜索
 
+```
+package main
+
+import (
+	"fmt"
+	"math/rand"
+	"time"
+)
+
+type indexTime struct {
+	addDuraction   time.Duration
+	delDuraction   time.Duration
+	findDuraction  time.Duration
+	totalDuraction time.Duration
+}
+
+type Index interface {
+	Add(data int)
+	Del(data int)
+	Find(data int) bool
+}
+
+func testSingleCase(n int, tree Index) indexTime {
+	result := rand.Perm(n)
+
+	beginTime := time.Now()
+	//添加
+	for i := 0; i != len(result); i++ {
+		tree.Add(result[i])
+	}
+	addEndTime := time.Now()
+
+	//查找
+	for i := 0; i != len(result); i++ {
+		target := tree.Find(result[i])
+		if target == false {
+			panic(fmt.Sprintf("invalid %v\n", result[i]))
+		}
+	}
+	findEndTime := time.Now()
+
+	//删除
+	for i := 0; i != len(result); i++ {
+		tree.Del(result[i])
+	}
+	delEndTime := time.Now()
+
+	//查找
+	for i := 0; i != len(result); i++ {
+		target := tree.Find(result[i])
+		if target == true {
+			panic(fmt.Sprintf("invalid %v\n", result[i]))
+		}
+	}
+
+	return indexTime{
+		addDuraction:   time.Duration(addEndTime.UnixNano() - beginTime.UnixNano()),
+		delDuraction:   time.Duration(delEndTime.UnixNano() - findEndTime.UnixNano()),
+		findDuraction:  time.Duration(findEndTime.UnixNano() - addEndTime.UnixNano()),
+		totalDuraction: time.Duration(delEndTime.UnixNano() - beginTime.UnixNano()),
+	}
+}
+func main() {
+	rand.Seed(time.Now().Unix())
+	n := 10000
+	testCase := []Index{
+		NewArrayIndex(),
+		NewArraySortIndex(),
+		NewBucketIndex(n),
+		NewHashIndex(n),
+		NewMapIndex(),
+		NewTreeIndex(),
+	}
+	for singleTestCaseIndex, singleTestCase := range testCase {
+		duraction := testSingleCase(n, singleTestCase)
+		fmt.Printf(
+			"case:%v time:%v addTime:%v delTime:%v findTime: %v\n",
+			singleTestCaseIndex,
+			duraction.totalDuraction,
+			duraction.addDuraction,
+			duraction.delDuraction,
+			duraction.findDuraction,
+		)
+	}
+}
+```
+
+我们先模拟一下数据库的三个基础操作，增加，删除和查找。我们建立一个测试列表，后续针对每个实现的方式我们测试一下性能。
+
 ## 2.1 数组搜索
 
 ## 2.2 二分数组搜索
@@ -33,4 +122,19 @@ category: 后端
 ## 4.1 前缀匹配原则
 
 ## 4.2 范围查找
+
+# 5 扩展
+
+## 5.1 表达式索引
+postgress特有
+
+## 5.2 局部索引
+postgress特有
+
+## 5.3 倒排索引
+postgress特有
+全文索引和gin索引
+
+## 5.5 通用索引
+gist索引
 
