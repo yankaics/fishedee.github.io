@@ -48,3 +48,147 @@ metrics,rate
 
 支持，模型层的本质就是一个http2的post的json服务。这样能简单迅速地让php，python的控制层接入到服务中。
 
+# 7 目标2
+
+## 7.1 问题
+由于原框架同时整合了通信，ioc，数据库，cache等模块，模块之间的耦合严重，导致框架中各个模块难以被单独地使用，而且使用ioc时总有一种莫名其妙就实现了的感觉。希望框架做的事情更透明更简单。
+
+## 7.2 设计
+
+```
+type LoginAo struct{
+	Init func()
+	IsLogin func(ctx *Context) bool
+	CheckMustLogin func(ctx *Context)
+}
+
+type loginAo struct{
+}
+
+func (this *loginAo) Init(){
+}
+
+func (this *loginAo) IsLogin(ctx *Context) bool {
+	return true
+}
+
+func (this *loginAo) CheckMustLogin(ctx *Context) {
+}
+
+func init(){
+	a := &loginAo{}
+	RegisterService(LoginAo{
+		Init:a.Init,
+		IsLogin:a.IsLogin,
+		CheckMustLogin:a.CheckMustLogin,
+	})
+}
+```
+
+定义服务
+
+```
+func main(){
+	var a LoginAo
+	err := InitService(&a)
+	if err != nil{
+		panic(err)
+	}
+	a.IsLogin(&Context{})
+}
+```
+
+使用服务
+
+```
+type LoginAo2 struct{
+	Init func()
+	IsLogin func(ctx *Context) bool
+	CheckMustLogin func(ctx *Context)
+}
+
+type loginAo2 struct{
+	db DB
+	log Log
+	loginAo LoginAo
+}
+
+func (this *loginAo2) Init(){
+	this.db,err = NewDB()
+	if err != nil{
+		panic(err)
+	}
+	this.log,err = NewLog()
+	if err != nil{
+		panic(err)
+	}
+	err = InitService(&this.loginAo)
+	if err != nil{
+		panic(err)
+	}
+}
+
+func (this *loginAo2) IsLogin(ctx *Context) bool {
+	this.log.Debug("%v","123")
+	return this.loginAo.IsLogin(ctx)
+}
+
+func (this *loginAo2) CheckMustLogin(ctx *Context) {
+	this.log.Debug("%v",456)
+	this.loginAo.CheckMustLogin(ctx)
+}
+
+func init(){
+	a := &loginAo2{}
+	RegisterService(LoginAo2{
+		Init:a.Init,
+		IsLogin:a.IsLogin,
+		CheckMustLogin:a.CheckMustLogin,
+	})
+}
+```
+
+服务嵌套
+
+```
+type loginController struct{
+	loginAo2 LoginAo2
+}
+
+func (this *loginController) Init(){
+	err := InitService(&this.loginAo2)
+	if err != nil{
+		panic(err)
+	}
+}
+
+func (this *loginController) IsLogin_Json() bool{
+	return this.loginAo2.IsLogin(this.Ctx)
+}
+
+func (this *loginController) CheckMustLogin_Json() interface{}{
+	this.loginAo2.CheckMustLogin()
+	return nil
+}
+
+func (this *loginController) AutoRender(data interface{},viewname string){
+	data,err := json.Marshal(data)
+	if err != nil{
+		panic(err)
+	}
+	this.Ctx.Write(data)
+}
+
+func init(){
+	InitRoute("dd",&loginController{})
+}
+```
+
+控制器与路由，这个是额外的演示写法，严格来说不属于micro-service框架的一部分
+
+问题
+
+* 错误怎么处理
+* 配置怎么共用
+
+
