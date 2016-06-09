@@ -57,22 +57,24 @@ metrics,rate
 
 ```
 type LoginAo struct{
-	Init func()
-	IsLogin func(ctx *Context) bool
-	CheckMustLogin func(ctx *Context)
+	Init func() Error
+	IsLogin func(ctx *Context) (bool,Error)
+	CheckMustLogin func(ctx *Context) Error
 }
 
 type loginAo struct{
 }
 
-func (this *loginAo) Init(){
+func (this *loginAo) Init() Error{
+	return nil
 }
 
-func (this *loginAo) IsLogin(ctx *Context) bool {
-	return true
+func (this *loginAo) IsLogin(ctx *Context) (bool,Error) {
+	return true,nil
 }
 
-func (this *loginAo) CheckMustLogin(ctx *Context) {
+func (this *loginAo) CheckMustLogin(ctx *Context) Error {
+	return nil
 }
 
 func init(){
@@ -102,9 +104,9 @@ func main(){
 
 ```
 type LoginAo2 struct{
-	Init func()
-	IsLogin func(ctx *Context) bool
-	CheckMustLogin func(ctx *Context)
+	Init func() Error
+	IsLogin func(ctx *Context) (bool,Error)
+	CheckMustLogin func(ctx *Context) Error
 }
 
 type loginAo2 struct{
@@ -113,7 +115,7 @@ type loginAo2 struct{
 	loginAo LoginAo
 }
 
-func (this *loginAo2) Init(){
+func (this *loginAo2) Init() Error{
 	this.db,err = NewDB()
 	if err != nil{
 		panic(err)
@@ -126,16 +128,17 @@ func (this *loginAo2) Init(){
 	if err != nil{
 		panic(err)
 	}
+	return nil
 }
 
-func (this *loginAo2) IsLogin(ctx *Context) bool {
+func (this *loginAo2) IsLogin(ctx *Context) (bool,Error){
 	this.log.Debug("%v","123")
 	return this.loginAo.IsLogin(ctx)
 }
 
-func (this *loginAo2) CheckMustLogin(ctx *Context) {
+func (this *loginAo2) CheckMustLogin(ctx *Context) Error {
 	this.log.Debug("%v",456)
-	this.loginAo.CheckMustLogin(ctx)
+	return this.loginAo.CheckMustLogin(ctx)
 }
 
 func init(){
@@ -155,28 +158,32 @@ type loginController struct{
 	loginAo2 LoginAo2
 }
 
-func (this *loginController) Init(){
+func (this *loginController) Init() Error {
 	err := InitService(&this.loginAo2)
 	if err != nil{
 		panic(err)
 	}
-}
-
-func (this *loginController) IsLogin_Json() bool{
-	return this.loginAo2.IsLogin(this.Ctx)
-}
-
-func (this *loginController) CheckMustLogin_Json() interface{}{
-	this.loginAo2.CheckMustLogin()
 	return nil
 }
 
-func (this *loginController) AutoRender(data interface{},viewname string){
-	data,err := json.Marshal(data)
+func (this *loginController) IsLogin_Json() (bool,Error){
+	return this.loginAo2.IsLogin(this.Ctx)
+}
+
+func (this *loginController) CheckMustLogin_Json() (interface{},Error){
+	return nil,this.loginAo2.CheckMustLogin()
+}
+
+func (this *loginController) AutoRender(data interface{},err Error,viewname string){
 	if err != nil{
-		panic(err)
+		this.Ctx.Write([]byte("Server Internal Error"))
+	}else{
+		data,err := json.Marshal(data)
+		if err != nil{
+			panic(err)
+		}
+		this.Ctx.Write(data)
 	}
-	this.Ctx.Write(data)
 }
 
 func init(){
@@ -186,9 +193,39 @@ func init(){
 
 控制器与路由，这个是额外的演示写法，严格来说不属于micro-service框架的一部分
 
-问题
-
 * 错误怎么处理
+
+目标：
+
+1. 去除WithError,WithException的自动生成
+2. 保留像Exception处理错误的方式
+3. 调用方能方便的根据被调用方的错误情况来重试
+
+错误统一使用Error类型，这个类型除了golang的error的Err函数外，还有GetCode,GetMsg,GetStack函数，用来指明出错的错误码，错误描述，以及错误堆栈，错误描述。
+
+```
+//业务异常
+panic(NewError(1,"用户未登录"))
+//系统异常
+panic("数据库崩溃")
+``` 
+
+同时，框架支持接收抛出的NewError类型，框架将默认的系统异常设置为6000的固定错误码，然后返回给上层。
+
+使用error与异常相结合的方式来处理错误，有以下好处：
+
+1. 不再需要WithError,WithException的方法
+2. 调用方可以随意容错被调用方的服务情况。
+3. 服务内部能像原来一样panic来抛出异常，不需要像原来go一样每次执行完一个函数后都去检查一下返回值。当然，你也可以沿用原有go的错误处理办法，这也是没有什么问题的。
+
+带来的麻烦为：
+
+1. 服务的边界处都需要显式地处理异常，不能像原来异常默认一路抛出到底的方式，异常最多只会在服务内执行，服务外就会变成一个错误。
+
+这样的错误处理结合了error与异常的方式，既简单又直接，写代码也方便。唯一的不好在于服务的边界都需要显式地去检查异常了，这是需要新生成代码的。
+
 * 配置怎么共用
+
+配置应该能识别能根据服务的位置，来获取不同的服务配置信息。多服务间怎么共享单个配置，由配置本身提供机制来实现。
 
 
