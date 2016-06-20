@@ -56,34 +56,30 @@ metrics,rate
 ## 7.2 设计
 
 ```
-type LoginAo struct{
-	Init func() Error
-	IsLogin func(ctx *Context) (bool,Error)
-	CheckMustLogin func(ctx *Context) Error
-}
-
-type loginAo struct{
-}
-
-func (this *loginAo) Init() Error{
+init() Error{
 	return nil
 }
 
-func (this *loginAo) IsLogin(ctx *Context) (bool,Error) {
+isLogin(ctx *Context) (bool,Error) {
 	return true,nil
 }
 
-func (this *loginAo) CheckMustLogin(ctx *Context) Error {
+checkMustLogin(ctx *Context) Error {
 	return nil
 }
 
+var (
+	Init = init
+	IsLogin = isLogin
+	CheckMustLogin = checkMustLogin
+)
+
 func init(){
-	a := &loginAo{}
-	RegisterService(LoginAo{
-		Init:a.Init,
-		IsLogin:a.IsLogin,
-		CheckMustLogin:a.CheckMustLogin,
-	})
+	InitModel(
+		&Init,
+		&IsLogin,
+		&CheckMustLogin,
+	)
 }
 ```
 
@@ -91,107 +87,94 @@ func init(){
 
 ```
 func main(){
-	var a LoginAo
-	err := InitService(&a)
-	if err != nil{
-		panic(err)
-	}
-	a.IsLogin(&Context{})
+	LoginAo.IsLogin(&Context{})
 }
 ```
 
 使用服务
 
 ```
-type LoginAo2 struct{
-	Init func() Error
-	IsLogin func(ctx *Context) (bool,Error)
-	CheckMustLogin func(ctx *Context) Error
-}
-
-type loginAo2 struct{
+var (
+	config Config
 	db DB
 	log Log
-	loginAo LoginAo
-}
+)
 
-func (this *loginAo2) Init() Error{
-	this.db,err = NewDB()
+func init() Error{
+	config,err = NewConfig(this)
 	if err != nil{
 		panic(err)
 	}
-	this.log,err = NewLog()
+	db,err = NewDB(this.config.Get("db"))
 	if err != nil{
 		panic(err)
 	}
-	err = InitService(&this.loginAo)
+	log,err = NewLog(this.config.Get("log"))
 	if err != nil{
 		panic(err)
 	}
 	return nil
 }
 
-func (this *loginAo2) IsLogin(ctx *Context) (bool,Error){
-	this.log.Debug("%v","123")
-	return this.loginAo.IsLogin(ctx)
+func isLogin(ctx *Context) (bool,Error){
+	return Login.IsLogin(ctx)
 }
 
-func (this *loginAo2) CheckMustLogin(ctx *Context) Error {
-	this.log.Debug("%v",456)
-	return this.loginAo.CheckMustLogin(ctx)
+func checkMustLogin(ctx *Context) Error {
+	log.Debug("%v",456)
+	return Login.CheckMustLogin(ctx)
 }
+
+var (
+	Init = init
+	IsLogin = isLogin
+	CheckMustLogin = checkMustLogin
+)
 
 func init(){
-	a := &loginAo2{}
-	RegisterService(LoginAo2{
-		Init:a.Init,
-		IsLogin:a.IsLogin,
-		CheckMustLogin:a.CheckMustLogin,
-	})
+	InitModel(
+		&Init,
+		&IsLogin,
+		&CheckMustLogin,
+	)
 }
 ```
 
 服务嵌套
 
 ```
-type loginController struct{
-	loginAo2 LoginAo2
+func isLogin(ctx *Context) (interface{},Error){
+	return LoginAo2.IsLogin()
 }
 
-func (this *loginController) Init() Error {
-	err := InitService(&this.loginAo2)
-	if err != nil{
-		panic(err)
-	}
-	return nil
+func checkMustLogin(ctx *Context) Error{
+	return LogoinAo2.CheckMustLogin()
 }
 
-func (this *loginController) IsLogin_Json() (bool,Error){
-	return this.loginAo2.IsLogin(this.Ctx)
-}
-
-func (this *loginController) CheckMustLogin_Json() (interface{},Error){
-	return nil,this.loginAo2.CheckMustLogin()
-}
-
-func (this *loginController) AutoRender(data interface{},err Error,viewname string){
-	if err != nil{
-		this.Ctx.Write([]byte("Server Internal Error"))
-	}else{
-		data,err := json.Marshal(data)
-		if err != nil{
-			panic(err)
-		}
-		this.Ctx.Write(data)
-	}
-}
-
+//同一包下的controller名字会有冲突现象
 func init(){
-	InitRoute("dd",&loginController{})
+	InitController("login/islogin","json",isLogin)
+	InitController("login/checkmustLogin","json",checkMustLogin)
 }
 ```
 
 控制器与路由，这个是额外的演示写法，严格来说不属于micro-service框架的一部分
+
+```
+func autoRender(ctx *Context,viewname string,data interface{},err Error) Error{
+	dataByte,err := json.Marshal(data)
+	if err != nil{
+		panic(err)
+	}
+	ctx.Write(dataByte)
+}
+
+func init(){
+	InitView(autoRender);
+}
+```
+
+视图，这个是额外的演示写法，严格来说不属于micro-service框架的一部分
 
 * 错误怎么处理
 
@@ -227,5 +210,38 @@ panic("数据库崩溃")
 * 配置怎么共用
 
 配置应该能识别能根据服务的位置，来获取不同的服务配置信息。多服务间怎么共享单个配置，由配置本身提供机制来实现。
+
+1. Config需要自己创建出来，默认就是传入this来获取pkg name，从而获取pkg name对应的config
+2. 在启动时，需要指定config的来源，是file，还是database，还是配置中心。其实都无关紧要，重要是实现了Config接口即可，默认情况下会提供多个配置的方式。
+
+```
+//Config接口
+type Config interface{
+	Get(runmode string,pkgName string,key string)string
+}
+//启动
+func main(){
+	Config config = NewFileConfig("conf")
+	RunService(config)
+}
+```
+
+3. 统一由环境变量来控制runmode的方式，go test时会默认用test的runmode（通过argv[0]来测试是否在go test环境下），其它情况默认用的是dev的runmode。
+
+```
+文件的配置形式
+//conf/server2.conf
+port = 8080
+
+[dev]
+logdriver = console
+logasync = true
+
+//conf/server2_models_cms.conf
+
+[dev]
+logdriver = console
+logasync = true
+```
 
 
